@@ -10,8 +10,8 @@ export default async function LoginPage() {
   return (
     <div className="mx-auto max-w-md space-y-6">
       <div>
-        <h1 className="text-2xl font-bold">Connexion</h1>
-        <p className="mt-1 text-white/60">Connecte-toi pour placer tes paris.</p>
+        <h1 className="text-2xl font-extrabold text-zinc-900">Connexion</h1>
+        <p className="mt-1 text-zinc-500">Connecte-toi pour placer tes paris. 🎰</p>
       </div>
 
       <form
@@ -20,14 +20,14 @@ export default async function LoginPage() {
           await signIn("google", { redirectTo: "/" });
         }}
       >
-        <button className="w-full rounded-md bg-white px-4 py-2.5 font-medium text-slate-900 hover:bg-white/90">
+        <button className="flex w-full items-center justify-center gap-2 rounded-full border border-zinc-200 bg-white px-4 py-2.5 font-semibold text-zinc-800 shadow-sm hover:bg-zinc-50">
           Continuer avec Google
         </button>
       </form>
 
       {devEnabled && (
-        <div className="rounded-xl border border-amber-400/30 bg-amber-400/10 p-4">
-          <p className="mb-3 text-sm text-amber-200">
+        <div className="rounded-2xl border border-amber-200 bg-amber-50 p-4">
+          <p className="mb-3 text-sm font-medium text-amber-700">
             Connexion de développement (locale uniquement)
           </p>
           <form
@@ -44,16 +44,16 @@ export default async function LoginPage() {
             <input
               name="name"
               placeholder="Ton nom"
-              className="w-full rounded-md border border-white/15 bg-white/10 px-3 py-2"
+              className="w-full rounded-xl border border-zinc-200 bg-white px-3 py-2 text-zinc-900 focus:border-orange-400 focus:outline-none focus:ring-2 focus:ring-orange-200"
             />
             <input
               name="email"
               type="email"
               required
               placeholder="ton.email@exemple.com"
-              className="w-full rounded-md border border-white/15 bg-white/10 px-3 py-2"
+              className="w-full rounded-xl border border-zinc-200 bg-white px-3 py-2 text-zinc-900 focus:border-orange-400 focus:outline-none focus:ring-2 focus:ring-orange-200"
             />
-            <button className="w-full rounded-md bg-indigo-500 px-4 py-2 font-medium text-white hover:bg-indigo-400">
+            <button className="w-full rounded-full bg-orange-500 px-4 py-2.5 font-semibold text-white shadow-sm shadow-orange-500/20 hover:bg-orange-400">
               Entrer
             </button>
           </form>

@@ -15,10 +15,10 @@ export default async function AdminPage() {
   if (!session?.user?.isAdmin) {
     return (
       <div className="space-y-3">
-        <h1 className="text-2xl font-bold">Admin</h1>
-        <p className="text-white/60">
+        <h1 className="text-2xl font-extrabold text-zinc-900">Admin</h1>
+        <p className="text-zinc-600">
           Accès réservé aux administrateurs.{" "}
-          <Link href="/" className="text-indigo-300 underline">
+          <Link href="/" className="font-semibold text-orange-600 hover:text-orange-500">
             Retour à l&apos;accueil
           </Link>
         </p>
@@ -42,15 +42,17 @@ export default async function AdminPage() {
   return (
     <div className="space-y-8">
       <div>
-        <h1 className="text-2xl font-bold">Espace admin</h1>
-        <p className="mt-1 text-white/60">
+        <h1 className="text-2xl font-extrabold text-zinc-900">⚙️ Espace admin</h1>
+        <p className="mt-1 text-zinc-500">
           Saisis l&apos;heure d&apos;arrivée réelle de {targetName()}. Cela clôture les
           paris du jour et calcule les scores.
         </p>
       </div>
 
-      <section className="rounded-xl border border-white/10 bg-white/5 p-5">
-        <h2 className="mb-3 text-lg font-semibold">Saisir une heure d&apos;arrivée</h2>
+      <section className="rounded-2xl border border-amber-100 bg-white p-5 shadow-sm">
+        <h2 className="mb-3 text-lg font-bold text-zinc-900">
+          Saisir une heure d&apos;arrivée
+        </h2>
         <AdminForm
           defaultDate={today}
           defaultTime={
@@ -60,39 +62,39 @@ export default async function AdminPage() {
       </section>
 
       <section>
-        <h2 className="mb-3 text-lg font-semibold">Jours récents</h2>
+        <h2 className="mb-3 text-lg font-bold text-zinc-900">Jours récents</h2>
         {days.length === 0 ? (
-          <p className="text-white/50">Aucun jour enregistré.</p>
+          <p className="text-zinc-400">Aucun jour enregistré.</p>
         ) : (
-          <ul className="divide-y divide-white/10 overflow-hidden rounded-xl border border-white/10 bg-white/5">
+          <ul className="divide-y divide-zinc-100 overflow-hidden rounded-2xl border border-amber-100 bg-white shadow-sm">
             {days.map((d) => (
               <li
                 key={d.id}
                 className="flex items-center justify-between gap-3 px-4 py-3 text-sm"
               >
-                <span>{formatDateLabel(d.date)}</span>
+                <span className="text-zinc-700">{formatDateLabel(d.date)}</span>
                 <div className="flex items-center gap-4">
-                  <span className="text-white/60">{d._count.bets} pari(s)</span>
+                  <span className="text-zinc-500">{d._count.bets} pari(s)</span>
                   {d.actualMin != null ? (
-                    <span className="font-mono text-emerald-300">
+                    <span className="font-mono text-emerald-600">
                       {minutesToHHMM(d.actualMin)}
                     </span>
                   ) : (
-                    <span className="text-white/40">non saisie</span>
+                    <span className="text-zinc-400">non saisie</span>
                   )}
                   {d.closed ? (
-                    <span className="rounded bg-rose-400/20 px-2 py-0.5 text-xs text-rose-300">
+                    <span className="rounded-full bg-rose-100 px-2 py-0.5 text-xs font-medium text-rose-600">
                       clôturé
                     </span>
                   ) : (
-                    <span className="rounded bg-emerald-400/20 px-2 py-0.5 text-xs text-emerald-300">
+                    <span className="rounded-full bg-emerald-100 px-2 py-0.5 text-xs font-medium text-emerald-700">
                       ouvert
                     </span>
                   )}
                   {d.closed && (
                     <form action={reopen}>
                       <input type="hidden" name="date" value={d.date} />
-                      <button className="rounded-md border border-white/15 px-2 py-1 text-xs text-white/70 hover:bg-white/10">
+                      <button className="rounded-full border border-zinc-200 px-3 py-1 text-xs text-zinc-600 hover:bg-zinc-100">
                         Rouvrir
                       </button>
                     </form>

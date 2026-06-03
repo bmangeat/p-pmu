@@ -14,7 +14,7 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Pari Retard",
+  title: "P-PMU",
   description: "Pariez sur l'heure d'arrivée du retardataire du bureau.",
 };
 
@@ -31,8 +31,8 @@ export default function RootLayout({
       <body className="flex min-h-full flex-col">
         <Header />
         <main className="mx-auto w-full max-w-4xl flex-1 px-4 py-8">{children}</main>
-        <footer className="border-t border-white/10 px-4 py-4 text-center text-xs text-white/40">
-          Pari Retard — un petit jeu de bureau.
+        <footer className="border-t border-amber-200/60 px-4 py-4 text-center text-xs text-zinc-400">
+          P-PMU — un petit jeu de bureau. 🐎
         </footer>
       </body>
     </html>

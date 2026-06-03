@@ -20,7 +20,11 @@ function fmt(min: number): string {
 
 export default function ArrivalChart({ data }: { data: Point[] }) {
   if (data.length === 0) {
-    return <p className="text-white/50">Pas encore de données à afficher.</p>;
+    return (
+      <div className="rounded-2xl border border-amber-100 bg-white p-6 text-zinc-400 shadow-sm">
+        Pas encore de données à afficher.
+      </div>
+    );
   }
 
   const mins = data.map((d) => d.min);
@@ -28,40 +32,40 @@ export default function ArrivalChart({ data }: { data: Point[] }) {
   const hi = Math.ceil((Math.max(...mins) + 15) / 15) * 15;
 
   return (
-    <div className="h-72 w-full rounded-xl border border-white/10 bg-white/5 p-4">
+    <div className="h-72 w-full rounded-2xl border border-amber-100 bg-white p-4 shadow-sm">
       <ResponsiveContainer width="100%" height="100%">
         <LineChart data={data} margin={{ top: 10, right: 16, bottom: 0, left: -8 }}>
-          <CartesianGrid stroke="rgba(255,255,255,0.08)" vertical={false} />
+          <CartesianGrid stroke="rgba(0,0,0,0.06)" vertical={false} />
           <XAxis
             dataKey="label"
-            tick={{ fill: "rgba(255,255,255,0.6)", fontSize: 12 }}
+            tick={{ fill: "rgba(0,0,0,0.5)", fontSize: 12 }}
             tickLine={false}
-            axisLine={{ stroke: "rgba(255,255,255,0.15)" }}
+            axisLine={{ stroke: "rgba(0,0,0,0.12)" }}
           />
           <YAxis
             domain={[lo, hi]}
             tickFormatter={fmt}
-            tick={{ fill: "rgba(255,255,255,0.6)", fontSize: 12 }}
+            tick={{ fill: "rgba(0,0,0,0.5)", fontSize: 12 }}
             tickLine={false}
-            axisLine={{ stroke: "rgba(255,255,255,0.15)" }}
+            axisLine={{ stroke: "rgba(0,0,0,0.12)" }}
             width={56}
           />
           <Tooltip
             formatter={(v) => [fmt(Number(v)), "Arrivée"]}
             contentStyle={{
-              background: "#0b1020",
-              border: "1px solid rgba(255,255,255,0.15)",
-              borderRadius: 8,
-              color: "#e7e9f3",
+              background: "#ffffff",
+              border: "1px solid #fde68a",
+              borderRadius: 12,
+              color: "#27272a",
             }}
           />
           <Line
             type="monotone"
             dataKey="min"
-            stroke="#34d399"
-            strokeWidth={2}
-            dot={{ r: 3, fill: "#34d399" }}
-            activeDot={{ r: 5 }}
+            stroke="#f97316"
+            strokeWidth={3}
+            dot={{ r: 4, fill: "#f97316" }}
+            activeDot={{ r: 6 }}
           />
         </LineChart>
       </ResponsiveContainer>
