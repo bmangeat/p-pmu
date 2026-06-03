@@ -1,8 +1,16 @@
 import "server-only";
-import { Resend } from "resend";
 
-const FROM = process.env.EMAIL_FROM || "P-PMU <onboarding@resend.dev>";
 const APP_URL = process.env.AUTH_URL || "https://p-pmu.vercel.app";
+const BREVO_ENDPOINT = "https://api.brevo.com/v3/smtp/email";
+
+// Expéditeur : format "Nom <email>" ou juste "email" (via EMAIL_FROM).
+function parseSender(): { name: string; email: string } | null {
+  const raw = (process.env.EMAIL_FROM || "").trim();
+  if (!raw) return null;
+  const m = /^(.*)<(.+)>$/.exec(raw);
+  if (m) return { name: m[1].trim() || "P-PMU", email: m[2].trim() };
+  return { name: "P-PMU", email: raw };
+}
 
 function reminderHtml(name: string | null, target: string): string {
   const hello = name ? `Salut ${name},` : "Salut,";
@@ -25,29 +33,39 @@ function reminderHtml(name: string | null, target: string): string {
   </div>`;
 }
 
-// Envoie un email de rappel. No-op (sans erreur) si RESEND_API_KEY n'est pas configuré.
+// Envoie un email de rappel via Brevo.
+// No-op (sans erreur) si BREVO_API_KEY ou EMAIL_FROM ne sont pas configurés.
 export async function sendReminderEmail(
   to: string,
   name: string | null,
   target: string,
 ): Promise<{ ok?: boolean; skipped?: boolean; error?: unknown }> {
-  const apiKey = process.env.RESEND_API_KEY;
-  if (!apiKey) {
-    console.warn(`[email] RESEND_API_KEY manquant — rappel non envoyé à ${to}`);
+  const apiKey = process.env.BREVO_API_KEY;
+  const sender = parseSender();
+  if (!apiKey || !sender) {
+    console.warn(`[email] BREVO_API_KEY/EMAIL_FROM manquant — rappel non envoyé à ${to}`);
     return { skipped: true };
   }
 
-  const resend = new Resend(apiKey);
-  const { error } = await resend.emails.send({
-    from: FROM,
-    to,
-    subject: "⏰ P-PMU : ton pari du jour t'attend !",
-    html: reminderHtml(name, target),
+  const res = await fetch(BREVO_ENDPOINT, {
+    method: "POST",
+    headers: {
+      "api-key": apiKey,
+      "content-type": "application/json",
+      accept: "application/json",
+    },
+    body: JSON.stringify({
+      sender,
+      to: [{ email: to, name: name ?? undefined }],
+      subject: "⏰ P-PMU : ton pari du jour t'attend !",
+      htmlContent: reminderHtml(name, target),
+    }),
   });
 
-  if (error) {
-    console.error("[email] échec d'envoi:", error);
-    return { error };
+  if (!res.ok) {
+    const detail = await res.text().catch(() => "");
+    console.error(`[email] échec Brevo (${res.status}):`, detail);
+    return { error: detail || res.status };
   }
   return { ok: true };
 }

@@ -90,21 +90,27 @@ sont **validés d'office** (voir ci-dessous).
   L'admin peut aussi le **régénérer** manuellement depuis `/admin`.
 - Une fois validé, l'utilisateur n'a plus jamais à le ressaisir (champ `User.verified`).
 
-## Rappels par email (Resend + Vercel Cron)
+## Rappels par email (Brevo + Vercel Cron)
 
 - Chaque utilisateur peut activer les **rappels par email** depuis `/profil` (désactivé par défaut).
 - Tous les jours ouvrés à ~9h30, un **cron Vercel** appelle `/api/cron/remind` qui envoie un
   email aux utilisateurs ayant activé l'option **et** qui n'ont pas encore parié (si le jour est ouvert).
-- L'envoi utilise **[Resend](https://resend.com)** (offre gratuite). Sans `RESEND_API_KEY`, l'envoi
-  est simplement ignoré (l'app continue de fonctionner).
+- L'envoi utilise **[Brevo](https://www.brevo.com)** (offre gratuite, 300 mails/jour) via son API REST.
+  Sans `BREVO_API_KEY`, l'envoi est simplement ignoré (l'app continue de fonctionner).
 
 **Mise en place :**
-1. Crée un compte gratuit sur [resend.com](https://resend.com) et une **API key**.
-2. (Recommandé) Vérifie un **domaine** pour envoyer depuis une vraie adresse. Sinon, l'adresse de
-   test `onboarding@resend.dev` n'envoie qu'à ta propre adresse de compte Resend.
-3. Sur Vercel, ajoute les variables : `RESEND_API_KEY`, `EMAIL_FROM` (ex. `P-PMU <noreply@ton-domaine>`),
-   et `CRON_SECRET` (une chaîne aléatoire — Vercel l'envoie automatiquement au cron pour le sécuriser).
-4. Le planning du cron est défini dans `vercel.json` (`30 7 * * 1-5`).
+1. Crée un compte gratuit sur [brevo.com](https://www.brevo.com).
+2. **Vérifie un expéditeur** : *Settings → Senders, Domains & Dedicated IPs → Senders → Add a sender* →
+   saisis ton nom + ton email (un **Gmail** convient) → Brevo t'envoie un mail de confirmation, clique le lien.
+3. Crée une **clé API** : *Settings → SMTP & API → API Keys → Generate a new key*.
+4. Sur Vercel, ajoute les variables :
+   - `BREVO_API_KEY` = ta clé API
+   - `EMAIL_FROM` = `P-PMU <ton.email@gmail.com>` (l'email exact que tu as vérifié)
+   - `CRON_SECRET` = une chaîne aléatoire (Vercel l'envoie automatiquement au cron pour le sécuriser)
+5. Le planning du cron est défini dans `vercel.json` (`30 7 * * 1-5`).
+
+> 💡 Envoyer depuis un Gmail via Brevo fonctionne (expéditeur vérifié), mais la délivrabilité est
+> meilleure avec un domaine dédié si tu en as un.
 
 > ⏰ **Fuseau** : le cron Vercel est en **UTC**. `30 7 * * 1-5` = 9h30 (heure de Paris) en été (CEST)
 > et 8h30 en hiver (CET). Ajuste l'heure dans `vercel.json` si besoin.
