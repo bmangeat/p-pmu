@@ -1,15 +1,18 @@
 import Link from "next/link";
 import { auth } from "@/auth";
 import { prisma } from "@/lib/prisma";
-import { reopenDayAction, toggleSuspendDayAction } from "@/lib/actions";
 import {
-  currentValidationCode,
+  regenerateCodeAction,
+  reopenDayAction,
+  toggleSuspendDayAction,
+} from "@/lib/actions";
+import {
   formatDateLabel,
   minutesToHHMM,
   targetName,
   todayDateString,
-  validationCodeExpiry,
 } from "@/lib/config";
+import { getValidationCode } from "@/lib/validation-code";
 import AdminForm from "@/components/AdminForm";
 
 export default async function AdminPage() {
@@ -29,6 +32,7 @@ export default async function AdminPage() {
   }
 
   const today = todayDateString();
+  const validationCode = await getValidationCode();
   const days = await prisma.arrivalDay.findMany({
     orderBy: { date: "desc" },
     take: 14,
@@ -44,6 +48,10 @@ export default async function AdminPage() {
     "use server";
     await toggleSuspendDayAction({}, formData);
   }
+  async function regenerate() {
+    "use server";
+    await regenerateCodeAction({}, new FormData());
+  }
 
   return (
     <div className="space-y-8">
@@ -58,12 +66,20 @@ export default async function AdminPage() {
       <section className="rounded-2xl border border-violet-200 bg-violet-50 p-5">
         <h2 className="text-lg font-bold text-zinc-900">🔐 Code de validation</h2>
         <p className="mt-1 text-sm text-zinc-500">
-          À communiquer aux nouveaux participants pour valider leur compte. Il change
-          toutes les heures (valable jusqu&apos;à {validationCodeExpiry()}).
+          À communiquer à un nouveau participant pour valider son compte.{" "}
+          <strong>Usage unique</strong> : un nouveau code est généré après chaque
+          validation.
         </p>
-        <p className="mt-3 font-mono text-4xl font-extrabold tracking-[0.3em] text-violet-700">
-          {currentValidationCode()}
-        </p>
+        <div className="mt-3 flex flex-wrap items-center gap-4">
+          <p className="font-mono text-4xl font-extrabold tracking-[0.3em] text-violet-700">
+            {validationCode}
+          </p>
+          <form action={regenerate}>
+            <button className="rounded-full border border-violet-300 px-4 py-1.5 text-sm font-semibold text-violet-700 hover:bg-violet-100">
+              Régénérer
+            </button>
+          </form>
+        </div>
       </section>
 
       <section className="rounded-2xl border border-amber-100 bg-white p-5 shadow-sm">

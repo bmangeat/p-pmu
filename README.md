@@ -83,10 +83,10 @@ sont **validés d'office** (voir ci-dessous).
 
 - L'accès est **réservé aux connectés** : toute page du jeu redirige vers `/login` sans session.
 - Un **nouveau compte** doit saisir un **code à 6 chiffres** sur `/verify` pour être validé.
-- Ce code est affiché sur `/admin`, **change toutes les heures** (dérivé de `AUTH_SECRET`
-  + l'heure courante, sans cron ni stockage) — l'admin le communique aux participants.
+- Ce code est affiché sur `/admin` et est **à usage unique** : dès qu'un compte est validé,
+  un nouveau code est généré (l'ancien devient invalide). Stocké en base (`AppSetting`).
+  L'admin peut aussi le **régénérer** manuellement depuis `/admin`.
 - Une fois validé, l'utilisateur n'a plus jamais à le ressaisir (champ `User.verified`).
-- ⚠️ Le code dépend de `AUTH_SECRET` : garde la même valeur en production, sinon les codes changent.
 
 ## Connexion Google (pour la production)
 

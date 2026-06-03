@@ -7,6 +7,13 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
+// Réglages applicatifs (ligne unique "singleton") : code de validation courant.
+model AppSetting {
+  id             String   @id @default("singleton")
+  validationCode String
+  updatedAt      DateTime @updatedAt
+}
+
 // ---- Auth.js (NextAuth) ----
 
 model User {

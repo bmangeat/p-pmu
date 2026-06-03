@@ -21,8 +21,7 @@ export default async function VerifyPage() {
       <div>
         <h1 className="text-2xl font-extrabold text-zinc-900">Valide ton compte 🔐</h1>
         <p className="mt-1 text-zinc-500">
-          Pour accéder à P-PMU, saisis le code du moment. Demande-le à un admin — il
-          change toutes les heures.
+          Pour accéder à P-PMU, saisis le code fourni par un admin. Il est à usage unique.
         </p>
       </div>
 

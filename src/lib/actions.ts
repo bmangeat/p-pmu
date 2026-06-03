@@ -4,16 +4,12 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { auth } from "@/auth";
 import { prisma } from "@/lib/prisma";
-import {
-  scoreBet,
-  hhmmToMinutes,
-  todayDateString,
-  isValidValidationCode,
-} from "@/lib/config";
+import { scoreBet, hhmmToMinutes, todayDateString } from "@/lib/config";
+import { regenerateValidationCode, verifyAndConsume } from "@/lib/validation-code";
 
 export type ActionState = { ok?: boolean; error?: string; message?: string };
 
-// Valider son compte avec le code horaire (affiché sur /admin).
+// Valider son compte avec le code à usage unique (affiché sur /admin).
 export async function verifyAccountAction(
   _prev: ActionState,
   formData: FormData,
@@ -21,16 +17,24 @@ export async function verifyAccountAction(
   const session = await auth();
   if (!session?.user?.id) return { error: "Tu dois être connecté." };
 
-  if (!isValidValidationCode(String(formData.get("code") ?? ""))) {
-    return { error: "Code invalide ou expiré. Demande le code du moment à un admin." };
+  const ok = await verifyAndConsume(session.user.id, String(formData.get("code") ?? ""));
+  if (!ok) {
+    return { error: "Code invalide. Demande le code à un admin (il change après usage)." };
   }
 
-  await prisma.user.update({
-    where: { id: session.user.id },
-    data: { verified: true },
-  });
-
   redirect("/");
+}
+
+// Régénérer le code de validation (admin) : invalide l'ancien immédiatement.
+export async function regenerateCodeAction(
+  _prev: ActionState,
+  _formData: FormData,
+): Promise<ActionState> {
+  const session = await auth();
+  if (!session?.user?.isAdmin) return { error: "Action réservée aux administrateurs." };
+  await regenerateValidationCode();
+  revalidatePath("/admin");
+  return { ok: true, message: "Nouveau code généré." };
 }
 
 function revalidateAll() {
