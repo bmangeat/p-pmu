@@ -9,7 +9,7 @@ export async function getTodayState(userId?: string) {
     include: {
       bets: {
         include: { user: true },
-        orderBy: { predictedMin: "asc" },
+        orderBy: [{ predictedAbsent: "asc" }, { predictedMin: "asc" }],
       },
     },
   });
@@ -19,8 +19,10 @@ export async function getTodayState(userId?: string) {
 
   return {
     date,
+    suspended: day?.suspended ?? false,
     closed: day?.closed ?? false,
     actualMin: day?.actualMin ?? null,
+    actualAbsent: day?.actualAbsent ?? false,
     bets,
     myBet,
   };
@@ -62,24 +64,25 @@ export async function getLeaderboard(): Promise<LeaderboardEntry[]> {
     .sort((a, b) => b.totalPoints - a.totalPoints);
 }
 
-// Historique des jours notés (pour le graphique et le tableau).
+// Historique des jours résolus (présent ou absent) pour le tableau et le graphique.
 export async function getHistory() {
   const days = await prisma.arrivalDay.findMany({
-    where: { actualMin: { not: null } },
+    where: { closed: true },
     orderBy: { date: "asc" },
     include: { bets: { include: { user: true } } },
   });
 
   return days.map((day) => {
     const winner = day.bets.reduce<(typeof day.bets)[number] | null>((best, b) => {
-      if (b.points === null) return best;
+      if (b.points === null || b.points <= 0) return best;
       if (!best || (best.points ?? -1) < b.points) return b;
       return best;
     }, null);
 
     return {
       date: day.date,
-      actualMin: day.actualMin as number,
+      actualMin: day.actualMin,
+      actualAbsent: day.actualAbsent,
       betsCount: day.bets.length,
       winnerName: winner ? winner.user.name || winner.user.email || "Anonyme" : null,
       winnerPoints: winner?.points ?? null,

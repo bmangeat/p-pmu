@@ -7,11 +7,15 @@ import BetForm from "@/components/BetForm";
 export default async function HomePage() {
   const session = await auth();
   const user = session?.user;
-  const { date, closed, actualMin, bets, myBet } = await getTodayState(user?.id);
+  const { date, suspended, closed, actualMin, actualAbsent, bets, myBet } =
+    await getTodayState(user?.id);
 
   const ranked = closed
     ? [...bets].sort((a, b) => (b.points ?? 0) - (a.points ?? 0))
     : bets;
+
+  const predictionLabel = (b: (typeof bets)[number]) =>
+    b.predictedAbsent ? "Absent 🙅" : minutesToHHMM(b.predictedMin ?? 0);
 
   return (
     <div className="space-y-8">
@@ -21,7 +25,9 @@ export default async function HomePage() {
         </h1>
         <p className="mt-1 text-zinc-500">
           {formatDateLabel(date)} ·{" "}
-          {closed ? (
+          {suspended ? (
+            <span className="font-medium text-zinc-500">jour suspendu</span>
+          ) : closed ? (
             <span className="font-medium text-rose-500">paris clôturés</span>
           ) : (
             <span className="font-medium text-emerald-600">paris ouverts</span>
@@ -29,17 +35,36 @@ export default async function HomePage() {
         </p>
       </section>
 
-      {closed && actualMin !== null && (
-        <section className="rounded-2xl border border-emerald-200 bg-emerald-50 p-4">
-          <p className="text-sm text-emerald-700">Heure d&apos;arrivée réelle</p>
-          <p className="text-3xl font-extrabold text-emerald-600">
-            {minutesToHHMM(actualMin)}
-          </p>
+      {closed && (
+        <section
+          className={`rounded-2xl border p-4 ${
+            actualAbsent
+              ? "border-amber-200 bg-amber-50"
+              : "border-emerald-200 bg-emerald-50"
+          }`}
+        >
+          {actualAbsent ? (
+            <>
+              <p className="text-sm text-amber-700">Résultat du jour</p>
+              <p className="text-3xl font-extrabold text-amber-600">Absent 🙅</p>
+            </>
+          ) : (
+            <>
+              <p className="text-sm text-emerald-700">Heure d&apos;arrivée réelle</p>
+              <p className="text-3xl font-extrabold text-emerald-600">
+                {minutesToHHMM(actualMin ?? 0)}
+              </p>
+            </>
+          )}
         </section>
       )}
 
       <section className="rounded-2xl border border-amber-100 bg-white p-5 shadow-sm">
-        {!user ? (
+        {suspended ? (
+          <p className="text-zinc-600">
+            {`Pas de pari aujourd'hui — ${targetName()} n'est pas attendu (jour suspendu). 🏖️`}
+          </p>
+        ) : !user ? (
           <p className="text-zinc-600">
             <Link href="/login" className="font-semibold text-orange-600 hover:text-orange-500">
               Connecte-toi
@@ -54,10 +79,13 @@ export default async function HomePage() {
           <div className="space-y-3">
             <p className="text-sm text-zinc-500">
               {myBet
-                ? `Ton pari actuel : ${minutesToHHMM(myBet.predictedMin)}. Tu peux le modifier tant que les paris sont ouverts.`
+                ? `Ton pari actuel : ${predictionLabel(myBet)}. Tu peux le modifier tant que les paris sont ouverts.`
                 : "Tu n'as pas encore parié aujourd'hui."}
             </p>
-            <BetForm defaultTime={minutesToHHMM(myBet?.predictedMin ?? 9 * 60)} />
+            <BetForm
+              defaultTime={minutesToHHMM(myBet?.predictedMin ?? 9 * 60)}
+              defaultMode={myBet?.predictedAbsent ? "absent" : "time"}
+            />
           </div>
         )}
       </section>
@@ -73,8 +101,8 @@ export default async function HomePage() {
             {ranked.map((bet, i) => {
               const isMe = bet.userId === user?.id;
               const diff =
-                closed && actualMin !== null
-                  ? Math.abs(bet.predictedMin - actualMin)
+                closed && !actualAbsent && actualMin !== null && !bet.predictedAbsent
+                  ? Math.abs((bet.predictedMin ?? 0) - actualMin)
                   : null;
               return (
                 <li
@@ -95,9 +123,7 @@ export default async function HomePage() {
                     </span>
                   </div>
                   <div className="flex items-center gap-4 text-sm">
-                    <span className="font-mono text-zinc-700">
-                      {minutesToHHMM(bet.predictedMin)}
-                    </span>
+                    <span className="font-mono text-zinc-700">{predictionLabel(bet)}</span>
                     {diff !== null && <span className="text-zinc-400">±{diff} min</span>}
                     {closed && (
                       <span className="w-14 text-right font-bold text-emerald-600">

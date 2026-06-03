@@ -7,14 +7,21 @@ export const dynamic = "force-dynamic";
 export default async function HistoriquePage() {
   const history = await getHistory();
 
-  const chartData = history.map((d) => ({
+  const presentDays = history.filter(
+    (d) => !d.actualAbsent && d.actualMin !== null,
+  );
+
+  const chartData = presentDays.map((d) => ({
     label: formatDateLabel(d.date),
-    min: d.actualMin,
+    min: d.actualMin as number,
   }));
 
   const avg =
-    history.length > 0
-      ? Math.round(history.reduce((s, d) => s + d.actualMin, 0) / history.length)
+    presentDays.length > 0
+      ? Math.round(
+          presentDays.reduce((s, d) => s + (d.actualMin as number), 0) /
+            presentDays.length,
+        )
       : null;
 
   return (
@@ -49,7 +56,11 @@ export default async function HistoriquePage() {
               <tr key={d.date}>
                 <td className="px-4 py-2 text-zinc-700">{formatDateLabel(d.date)}</td>
                 <td className="px-4 py-2 font-mono text-zinc-800">
-                  {minutesToHHMM(d.actualMin)}
+                  {d.actualAbsent || d.actualMin === null ? (
+                    <span className="font-sans text-amber-600">Absent</span>
+                  ) : (
+                    minutesToHHMM(d.actualMin)
+                  )}
                 </td>
                 <td className="px-4 py-2 text-zinc-700">
                   {d.winnerName ? (

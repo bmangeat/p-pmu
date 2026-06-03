@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { auth } from "@/auth";
 import { prisma } from "@/lib/prisma";
-import { reopenDayAction } from "@/lib/actions";
+import { reopenDayAction, toggleSuspendDayAction } from "@/lib/actions";
 import {
   formatDateLabel,
   minutesToHHMM,
@@ -38,27 +38,52 @@ export default async function AdminPage() {
     "use server";
     await reopenDayAction({}, formData);
   }
+  async function toggleSuspend(formData: FormData) {
+    "use server";
+    await toggleSuspendDayAction({}, formData);
+  }
 
   return (
     <div className="space-y-8">
       <div>
         <h1 className="text-2xl font-extrabold text-zinc-900">⚙️ Espace admin</h1>
         <p className="mt-1 text-zinc-500">
-          Saisis l&apos;heure d&apos;arrivée réelle de {targetName()}. Cela clôture les
-          paris du jour et calcule les scores.
+          Saisis le résultat du jour (présent à une heure, ou absent) — cela clôture les
+          paris et calcule les scores. Tu peux aussi suspendre un jour sans pari.
         </p>
       </div>
 
       <section className="rounded-2xl border border-amber-100 bg-white p-5 shadow-sm">
-        <h2 className="mb-3 text-lg font-bold text-zinc-900">
-          Saisir une heure d&apos;arrivée
-        </h2>
+        <h2 className="mb-3 text-lg font-bold text-zinc-900">Résultat du jour</h2>
         <AdminForm
           defaultDate={today}
           defaultTime={
             todayDay?.actualMin != null ? minutesToHHMM(todayDay.actualMin) : "09:00"
           }
         />
+      </section>
+
+      <section className="rounded-2xl border border-amber-100 bg-white p-5 shadow-sm">
+        <h2 className="mb-1 text-lg font-bold text-zinc-900">Suspendre un jour</h2>
+        <p className="mb-3 text-sm text-zinc-500">
+          {`Pour les jours où ${targetName()} n'est pas attendu (congé, télétravail…) : aucun pari, aucun point.`}
+        </p>
+        <form action={toggleSuspend} className="flex flex-wrap items-end gap-3">
+          <input type="hidden" name="suspend" value="1" />
+          <label className="flex flex-col gap-1 text-sm font-medium text-zinc-600">
+            Date à suspendre
+            <input
+              type="date"
+              name="date"
+              defaultValue={today}
+              required
+              className="rounded-xl border border-zinc-200 bg-white px-3 py-2 text-zinc-900 focus:border-orange-400 focus:outline-none focus:ring-2 focus:ring-orange-200"
+            />
+          </label>
+          <button className="rounded-full bg-zinc-800 px-5 py-2.5 font-semibold text-white hover:bg-zinc-700">
+            Suspendre ce jour
+          </button>
+        </form>
       </section>
 
       <section>
@@ -70,19 +95,29 @@ export default async function AdminPage() {
             {days.map((d) => (
               <li
                 key={d.id}
-                className="flex items-center justify-between gap-3 px-4 py-3 text-sm"
+                className="flex flex-wrap items-center justify-between gap-3 px-4 py-3 text-sm"
               >
                 <span className="text-zinc-700">{formatDateLabel(d.date)}</span>
-                <div className="flex items-center gap-4">
+                <div className="flex flex-wrap items-center gap-3">
                   <span className="text-zinc-500">{d._count.bets} pari(s)</span>
-                  {d.actualMin != null ? (
+
+                  {d.suspended ? (
+                    <span className="text-zinc-400">—</span>
+                  ) : d.actualAbsent ? (
+                    <span className="font-medium text-amber-600">absent</span>
+                  ) : d.actualMin != null ? (
                     <span className="font-mono text-emerald-600">
                       {minutesToHHMM(d.actualMin)}
                     </span>
                   ) : (
-                    <span className="text-zinc-400">non saisie</span>
+                    <span className="text-zinc-400">non saisi</span>
                   )}
-                  {d.closed ? (
+
+                  {d.suspended ? (
+                    <span className="rounded-full bg-zinc-200 px-2 py-0.5 text-xs font-medium text-zinc-600">
+                      suspendu
+                    </span>
+                  ) : d.closed ? (
                     <span className="rounded-full bg-rose-100 px-2 py-0.5 text-xs font-medium text-rose-600">
                       clôturé
                     </span>
@@ -91,11 +126,28 @@ export default async function AdminPage() {
                       ouvert
                     </span>
                   )}
-                  {d.closed && (
+
+                  {d.suspended ? (
+                    <form action={toggleSuspend}>
+                      <input type="hidden" name="date" value={d.date} />
+                      <input type="hidden" name="suspend" value="0" />
+                      <button className="rounded-full border border-zinc-200 px-3 py-1 text-xs text-zinc-600 hover:bg-zinc-100">
+                        Réactiver
+                      </button>
+                    </form>
+                  ) : d.closed ? (
                     <form action={reopen}>
                       <input type="hidden" name="date" value={d.date} />
                       <button className="rounded-full border border-zinc-200 px-3 py-1 text-xs text-zinc-600 hover:bg-zinc-100">
                         Rouvrir
+                      </button>
+                    </form>
+                  ) : (
+                    <form action={toggleSuspend}>
+                      <input type="hidden" name="date" value={d.date} />
+                      <input type="hidden" name="suspend" value="1" />
+                      <button className="rounded-full border border-zinc-200 px-3 py-1 text-xs text-zinc-600 hover:bg-zinc-100">
+                        Suspendre
                       </button>
                     </form>
                   )}

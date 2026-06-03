@@ -3,11 +3,18 @@
 import { revalidatePath } from "next/cache";
 import { auth } from "@/auth";
 import { prisma } from "@/lib/prisma";
-import { computeScore, hhmmToMinutes, todayDateString } from "@/lib/config";
+import { scoreBet, hhmmToMinutes, todayDateString } from "@/lib/config";
 
 export type ActionState = { ok?: boolean; error?: string; message?: string };
 
-// Placer (ou modifier) son pari pour aujourd'hui.
+function revalidateAll() {
+  revalidatePath("/");
+  revalidatePath("/classement");
+  revalidatePath("/historique");
+  revalidatePath("/admin");
+}
+
+// Placer (ou modifier) son pari pour aujourd'hui : une heure ou "absent".
 export async function placeBetAction(
   _prev: ActionState,
   formData: FormData,
@@ -15,8 +22,16 @@ export async function placeBetAction(
   const session = await auth();
   if (!session?.user?.id) return { error: "Tu dois être connecté pour parier." };
 
-  const min = hhmmToMinutes(String(formData.get("time") ?? ""));
-  if (min === null) return { error: "Heure invalide. Utilise le format HH:mm." };
+  const mode = String(formData.get("mode") ?? "time");
+  let predictedMin: number | null = null;
+  if (mode === "absent") {
+    predictedMin = null;
+  } else {
+    predictedMin = hhmmToMinutes(String(formData.get("time") ?? ""));
+    if (predictedMin === null) {
+      return { error: "Heure invalide. Utilise le format HH:mm." };
+    }
+  }
 
   const date = todayDateString();
   const day = await prisma.arrivalDay.upsert({
@@ -25,21 +40,28 @@ export async function placeBetAction(
     create: { date },
   });
 
-  if (day.closed) {
-    return { error: "Les paris sont clôturés pour aujourd'hui." };
-  }
+  if (day.suspended) return { error: "Les paris sont suspendus pour ce jour." };
+  if (day.closed) return { error: "Les paris sont clôturés pour aujourd'hui." };
 
   await prisma.bet.upsert({
     where: { userId_dayId: { userId: session.user.id, dayId: day.id } },
-    update: { predictedMin: min },
-    create: { userId: session.user.id, dayId: day.id, predictedMin: min },
+    update: { predictedMin, predictedAbsent: mode === "absent" },
+    create: {
+      userId: session.user.id,
+      dayId: day.id,
+      predictedMin,
+      predictedAbsent: mode === "absent",
+    },
   });
 
   revalidatePath("/");
-  return { ok: true, message: "Pari enregistré !" };
+  return {
+    ok: true,
+    message: mode === "absent" ? "Pari « absent » enregistré !" : "Pari enregistré !",
+  };
 }
 
-// Saisir l'heure d'arrivée réelle (admin) : calcule les scores et clôture le jour.
+// Saisir le résultat (admin) : présent à une heure, ou absent. Calcule les scores.
 export async function setActualArrivalAction(
   _prev: ActionState,
   formData: FormData,
@@ -48,13 +70,19 @@ export async function setActualArrivalAction(
   if (!session?.user?.isAdmin) return { error: "Action réservée aux administrateurs." };
 
   const date = String(formData.get("date") ?? "").trim() || todayDateString();
-  const min = hhmmToMinutes(String(formData.get("time") ?? ""));
-  if (min === null) return { error: "Heure invalide. Utilise le format HH:mm." };
+  const mode = String(formData.get("mode") ?? "time");
+
+  let actualMin: number | null = null;
+  const actualAbsent = mode === "absent";
+  if (!actualAbsent) {
+    actualMin = hhmmToMinutes(String(formData.get("time") ?? ""));
+    if (actualMin === null) return { error: "Heure invalide. Utilise le format HH:mm." };
+  }
 
   const day = await prisma.arrivalDay.upsert({
     where: { date },
-    update: { actualMin: min, closed: true },
-    create: { date, actualMin: min, closed: true },
+    update: { actualMin, actualAbsent, closed: true, suspended: false },
+    create: { date, actualMin, actualAbsent, closed: true },
   });
 
   const bets = await prisma.bet.findMany({ where: { dayId: day.id } });
@@ -62,19 +90,54 @@ export async function setActualArrivalAction(
     bets.map((bet) =>
       prisma.bet.update({
         where: { id: bet.id },
-        data: { points: computeScore(bet.predictedMin, min) },
+        data: {
+          points: scoreBet(
+            { predictedMin: bet.predictedMin, predictedAbsent: bet.predictedAbsent },
+            { actualMin, actualAbsent },
+          ),
+        },
       }),
     ),
   );
 
-  revalidatePath("/");
-  revalidatePath("/classement");
-  revalidatePath("/historique");
-  revalidatePath("/admin");
-  return { ok: true, message: `Heure réelle enregistrée, ${bets.length} pari(s) noté(s).` };
+  revalidateAll();
+  return {
+    ok: true,
+    message: actualAbsent
+      ? `Marqué absent, ${bets.length} pari(s) noté(s).`
+      : `Heure réelle enregistrée, ${bets.length} pari(s) noté(s).`,
+  };
 }
 
-// Rouvrir un jour clôturé (admin) : efface l'heure réelle et les scores.
+// Suspendre / réactiver un jour (admin) : aucun pari, aucun point quand suspendu.
+export async function toggleSuspendDayAction(
+  _prev: ActionState,
+  formData: FormData,
+): Promise<ActionState> {
+  const session = await auth();
+  if (!session?.user?.isAdmin) return { error: "Action réservée aux administrateurs." };
+
+  const date = String(formData.get("date") ?? "").trim() || todayDateString();
+  const suspend = String(formData.get("suspend") ?? "1") === "1";
+
+  const day = await prisma.arrivalDay.upsert({
+    where: { date },
+    update: suspend
+      ? { suspended: true, closed: false, actualMin: null, actualAbsent: false }
+      : { suspended: false },
+    create: { date, suspended: suspend },
+  });
+
+  // Un jour suspendu n'octroie aucun point : on efface les scores éventuels.
+  if (suspend) {
+    await prisma.bet.updateMany({ where: { dayId: day.id }, data: { points: null } });
+  }
+
+  revalidateAll();
+  return { ok: true, message: suspend ? "Jour suspendu." : "Jour réactivé." };
+}
+
+// Rouvrir un jour clôturé (admin) : efface le résultat et les scores.
 export async function reopenDayAction(
   _prev: ActionState,
   formData: FormData,
@@ -91,12 +154,9 @@ export async function reopenDayAction(
   await prisma.bet.updateMany({ where: { dayId: day.id }, data: { points: null } });
   await prisma.arrivalDay.update({
     where: { id: day.id },
-    data: { actualMin: null, closed: false },
+    data: { actualMin: null, actualAbsent: false, closed: false },
   });
 
-  revalidatePath("/");
-  revalidatePath("/classement");
-  revalidatePath("/historique");
-  revalidatePath("/admin");
+  revalidateAll();
   return { ok: true, message: "Jour rouvert." };
 }

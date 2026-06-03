@@ -9,19 +9,31 @@ export function targetName(): string {
 }
 
 // ----- Barème de score -----
-// Score = BASE - écart_en_minutes (jamais en dessous de 0)
-// + BONUS si l'heure est devinée à la minute exacte.
+// Présent bien deviné : BASE - écart_en_minutes (plancher 0) + BONUS si pile.
+// Absent bien deviné : ABSENT_CORRECT (forfait, moins impactant).
+// Mauvaise prédiction de présence : 0.
 export const SCORE = {
   BASE: 100,
   PENALTY_PER_MIN: 1,
   EXACT_BONUS: 50,
+  ABSENT_CORRECT: 25,
 };
 
-export function computeScore(predictedMin: number, actualMin: number): number {
-  const diff = Math.abs(predictedMin - actualMin);
+export type BetInput = { predictedMin: number | null; predictedAbsent: boolean };
+export type Outcome = { actualMin: number | null; actualAbsent: boolean };
+
+export function scoreBet(bet: BetInput, outcome: Outcome): number {
+  // Résultat : absent
+  if (outcome.actualAbsent) {
+    return bet.predictedAbsent ? SCORE.ABSENT_CORRECT : 0;
+  }
+  // Résultat : présent — un pari "absent" ou sans heure ne marque rien
+  if (bet.predictedAbsent || bet.predictedMin === null || outcome.actualMin === null) {
+    return 0;
+  }
+  const diff = Math.abs(bet.predictedMin - outcome.actualMin);
   const base = Math.max(0, SCORE.BASE - diff * SCORE.PENALTY_PER_MIN);
-  const bonus = diff === 0 ? SCORE.EXACT_BONUS : 0;
-  return base + bonus;
+  return base + (diff === 0 ? SCORE.EXACT_BONUS : 0);
 }
 
 // ----- Helpers de temps (minutes depuis minuit) -----

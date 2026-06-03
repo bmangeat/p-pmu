@@ -62,23 +62,26 @@ model VerificationToken {
 
 // Un jour de "course" : la journée pour laquelle on parie sur l'heure d'arrivée.
 model ArrivalDay {
-  id        String   @id @default(cuid())
-  date      String   @unique // "YYYY-MM-DD" (fuseau du bureau)
-  actualMin Int? // heure d'arrivée réelle en minutes depuis minuit (null tant que non saisie)
-  closed    Boolean  @default(false)
-  createdAt DateTime @default(now())
+  id           String   @id @default(cuid())
+  date         String   @unique // "YYYY-MM-DD" (fuseau du bureau)
+  actualMin    Int? // heure d'arrivée réelle en minutes depuis minuit (null si absent ou non saisi)
+  actualAbsent Boolean  @default(false) // résultat: le retardataire n'est pas venu
+  suspended    Boolean  @default(false) // jour suspendu par l'admin: aucun pari, aucun point
+  closed       Boolean  @default(false) // résultat saisi: paris clôturés et scores calculés
+  createdAt    DateTime @default(now())
 
   bets Bet[]
 }
 
-// Un pari d'un utilisateur pour un jour donné.
+// Un pari d'un utilisateur pour un jour donné : une heure OU "absent".
 model Bet {
-  id           String   @id @default(cuid())
-  userId       String
-  dayId        String
-  predictedMin Int // heure pariée en minutes depuis minuit
-  points       Int? // score attribué (null tant que le jour n'est pas clôturé)
-  createdAt    DateTime @default(now())
+  id              String   @id @default(cuid())
+  userId          String
+  dayId           String
+  predictedMin    Int? // heure pariée en minutes depuis minuit (null si pari "absent")
+  predictedAbsent Boolean  @default(false) // l'utilisateur parie qu'il ne viendra pas
+  points          Int? // score attribué (null tant que le jour n'est pas clôturé)
+  createdAt       DateTime @default(now())
 
   user User       @relation(fields: [userId], references: [id], onDelete: Cascade)
   day  ArrivalDay @relation(fields: [dayId], references: [id], onDelete: Cascade)
