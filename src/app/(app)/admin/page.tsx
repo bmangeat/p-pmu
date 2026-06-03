@@ -14,6 +14,7 @@ import {
 } from "@/lib/config";
 import { getValidationCode } from "@/lib/validation-code";
 import AdminForm from "@/components/AdminForm";
+import TestEmailButton from "@/components/TestEmailButton";
 
 export default async function AdminPage() {
   const session = await auth();
@@ -80,6 +81,14 @@ export default async function AdminPage() {
             </button>
           </form>
         </div>
+      </section>
+
+      <section className="rounded-2xl border border-amber-100 bg-white p-5 shadow-sm">
+        <h2 className="mb-1 text-lg font-bold text-zinc-900">📧 Rappels par email</h2>
+        <p className="mb-3 text-sm text-zinc-500">
+          Vérifie la configuration Brevo en t&apos;envoyant un email de rappel.
+        </p>
+        <TestEmailButton />
       </section>
 
       <section className="rounded-2xl border border-amber-100 bg-white p-5 shadow-sm">

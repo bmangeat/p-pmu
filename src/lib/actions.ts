@@ -4,8 +4,15 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { auth } from "@/auth";
 import { prisma } from "@/lib/prisma";
-import { scoreBet, hhmmToMinutes, todayDateString, isWeekend } from "@/lib/config";
+import {
+  scoreBet,
+  hhmmToMinutes,
+  todayDateString,
+  isWeekend,
+  targetName,
+} from "@/lib/config";
 import { regenerateValidationCode, verifyAndConsume } from "@/lib/validation-code";
+import { sendReminderEmail } from "@/lib/email";
 
 export type ActionState = { ok?: boolean; error?: string; message?: string };
 
@@ -46,6 +53,27 @@ export async function setNotifyEmailAction(
       ? "Rappels par email activés."
       : "Rappels par email désactivés.",
   };
+}
+
+// Envoyer un email de test (admin) à sa propre adresse, pour vérifier la config Brevo.
+export async function sendTestEmailAction(
+  _prev: ActionState,
+  _formData: FormData,
+): Promise<ActionState> {
+  const session = await auth();
+  if (!session?.user?.isAdmin) return { error: "Action réservée aux administrateurs." };
+
+  const email = session.user.email;
+  if (!email) return { error: "Ton compte n'a pas d'adresse email." };
+
+  const r = await sendReminderEmail(email, session.user.name ?? null, targetName());
+  if (r.skipped) {
+    return { error: "Email non configuré (BREVO_API_KEY / EMAIL_FROM manquants sur Vercel)." };
+  }
+  if (r.error) {
+    return { error: `Échec de l'envoi : ${String(r.error).slice(0, 200)}` };
+  }
+  return { ok: true, message: `Email de test envoyé à ${email} ✅` };
 }
 
 // Régénérer le code de validation (admin) : invalide l'ancien immédiatement.
