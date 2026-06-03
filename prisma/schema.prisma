@@ -23,6 +23,7 @@ model User {
   emailVerified DateTime?
   image         String?
   verified      Boolean   @default(false) // compte validé via le code (accès au jeu)
+  notifyEmail   Boolean   @default(false) // reçoit les rappels par email (désactivé par défaut)
   createdAt     DateTime  @default(now())
 
   accounts Account[]

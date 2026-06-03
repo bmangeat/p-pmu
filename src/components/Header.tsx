@@ -25,6 +25,11 @@ export default async function Header() {
                 {l.label}
               </Link>
             ))}
+            {user && (
+              <Link href="/profil" className="hover:text-zinc-900">
+                Profil
+              </Link>
+            )}
             {user?.isAdmin && (
               <Link href="/admin" className="text-violet-600 hover:text-violet-500">
                 Admin

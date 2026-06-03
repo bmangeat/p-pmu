@@ -65,6 +65,13 @@ export function todayDateString(date = new Date()): string {
   }).format(date);
 }
 
+// Vrai si la date "YYYY-MM-DD" tombe un samedi ou un dimanche.
+export function isWeekend(dateStr: string): boolean {
+  const [y, m, d] = dateStr.split("-").map(Number);
+  const dow = new Date(Date.UTC(y, m - 1, d)).getUTCDay(); // 0 = dimanche, 6 = samedi
+  return dow === 0 || dow === 6;
+}
+
 // Affichage lisible d'une date "YYYY-MM-DD" (ex: "mar. 3 juin").
 export function formatDateLabel(dateStr: string): string {
   const d = new Date(`${dateStr}T12:00:00`);

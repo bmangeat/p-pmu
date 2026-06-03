@@ -16,7 +16,9 @@ Classement général + graphique de l'historique des arrivées.
 - Chaque pari est soit une **heure d'arrivée**, soit **« Absent »** (il ne viendra pas).
 - Les paris restent **ouverts** tant qu'un admin n'a pas saisi le résultat (présent à une
   heure, ou absent). À la saisie, le jour est **clôturé** et les scores calculés.
+- Les **week-ends sont suspendus par défaut** (aucun pari le samedi/dimanche).
 - L'admin peut **suspendre** un jour (congé, télétravail…) : aucun pari, aucun point. Réversible.
+- La page de pari affiche un **calendrier** des jours ouverts (vert) / fermés (gris/rouge).
 - **Barème** (modifiable dans `src/lib/config.ts`, fonction `scoreBet`) :
   - Présent bien deviné : `100 − écart_en_minutes` (plancher 0) **+ 50** si pile.
   - « Absent » bien deviné : **25 pts** (forfait, moins impactant).
@@ -87,6 +89,25 @@ sont **validés d'office** (voir ci-dessous).
   un nouveau code est généré (l'ancien devient invalide). Stocké en base (`AppSetting`).
   L'admin peut aussi le **régénérer** manuellement depuis `/admin`.
 - Une fois validé, l'utilisateur n'a plus jamais à le ressaisir (champ `User.verified`).
+
+## Rappels par email (Resend + Vercel Cron)
+
+- Chaque utilisateur peut activer les **rappels par email** depuis `/profil` (désactivé par défaut).
+- Tous les jours ouvrés à ~9h30, un **cron Vercel** appelle `/api/cron/remind` qui envoie un
+  email aux utilisateurs ayant activé l'option **et** qui n'ont pas encore parié (si le jour est ouvert).
+- L'envoi utilise **[Resend](https://resend.com)** (offre gratuite). Sans `RESEND_API_KEY`, l'envoi
+  est simplement ignoré (l'app continue de fonctionner).
+
+**Mise en place :**
+1. Crée un compte gratuit sur [resend.com](https://resend.com) et une **API key**.
+2. (Recommandé) Vérifie un **domaine** pour envoyer depuis une vraie adresse. Sinon, l'adresse de
+   test `onboarding@resend.dev` n'envoie qu'à ta propre adresse de compte Resend.
+3. Sur Vercel, ajoute les variables : `RESEND_API_KEY`, `EMAIL_FROM` (ex. `P-PMU <noreply@ton-domaine>`),
+   et `CRON_SECRET` (une chaîne aléatoire — Vercel l'envoie automatiquement au cron pour le sécuriser).
+4. Le planning du cron est défini dans `vercel.json` (`30 7 * * 1-5`).
+
+> ⏰ **Fuseau** : le cron Vercel est en **UTC**. `30 7 * * 1-5` = 9h30 (heure de Paris) en été (CEST)
+> et 8h30 en hiver (CET). Ajuste l'heure dans `vercel.json` si besoin.
 
 ## Connexion Google (pour la production)
 

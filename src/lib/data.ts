@@ -1,5 +1,5 @@
 import { prisma } from "@/lib/prisma";
-import { todayDateString } from "@/lib/config";
+import { isWeekend, todayDateString } from "@/lib/config";
 
 // État du jour courant : le jour, tous les paris, et le pari de l'utilisateur.
 export async function getTodayState(userId?: string) {
@@ -19,6 +19,7 @@ export async function getTodayState(userId?: string) {
 
   return {
     date,
+    weekend: isWeekend(date),
     suspended: day?.suspended ?? false,
     closed: day?.closed ?? false,
     actualMin: day?.actualMin ?? null,

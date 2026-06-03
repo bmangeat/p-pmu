@@ -4,7 +4,7 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { auth } from "@/auth";
 import { prisma } from "@/lib/prisma";
-import { scoreBet, hhmmToMinutes, todayDateString } from "@/lib/config";
+import { scoreBet, hhmmToMinutes, todayDateString, isWeekend } from "@/lib/config";
 import { regenerateValidationCode, verifyAndConsume } from "@/lib/validation-code";
 
 export type ActionState = { ok?: boolean; error?: string; message?: string };
@@ -23,6 +23,29 @@ export async function verifyAccountAction(
   }
 
   redirect("/");
+}
+
+// Activer / désactiver les rappels par email pour l'utilisateur courant.
+export async function setNotifyEmailAction(
+  _prev: ActionState,
+  formData: FormData,
+): Promise<ActionState> {
+  const session = await auth();
+  if (!session?.user?.id) return { error: "Tu dois être connecté." };
+
+  const enabled = String(formData.get("enabled") ?? "") === "1";
+  await prisma.user.update({
+    where: { id: session.user.id },
+    data: { notifyEmail: enabled },
+  });
+
+  revalidatePath("/profil");
+  return {
+    ok: true,
+    message: enabled
+      ? "Rappels par email activés."
+      : "Rappels par email désactivés.",
+  };
 }
 
 // Régénérer le code de validation (admin) : invalide l'ancien immédiatement.
@@ -64,6 +87,8 @@ export async function placeBetAction(
   }
 
   const date = todayDateString();
+  if (isWeekend(date)) return { error: "Pas de pari le week-end. 🛌" };
+
   const day = await prisma.arrivalDay.upsert({
     where: { date },
     update: {},

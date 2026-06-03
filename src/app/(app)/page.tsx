@@ -3,11 +3,12 @@ import { auth } from "@/auth";
 import { getTodayState } from "@/lib/data";
 import { formatDateLabel, minutesToHHMM, targetName } from "@/lib/config";
 import BetForm from "@/components/BetForm";
+import BetCalendar from "@/components/BetCalendar";
 
 export default async function HomePage() {
   const session = await auth();
   const user = session?.user;
-  const { date, suspended, closed, actualMin, actualAbsent, bets, myBet } =
+  const { date, weekend, suspended, closed, actualMin, actualAbsent, bets, myBet } =
     await getTodayState(user?.id);
 
   const ranked = closed
@@ -25,7 +26,9 @@ export default async function HomePage() {
         </h1>
         <p className="mt-1 text-zinc-500">
           {formatDateLabel(date)} ·{" "}
-          {suspended ? (
+          {weekend ? (
+            <span className="font-medium text-rose-500">week-end</span>
+          ) : suspended ? (
             <span className="font-medium text-zinc-500">jour suspendu</span>
           ) : closed ? (
             <span className="font-medium text-rose-500">paris clôturés</span>
@@ -60,7 +63,11 @@ export default async function HomePage() {
       )}
 
       <section className="rounded-2xl border border-amber-100 bg-white p-5 shadow-sm">
-        {suspended ? (
+        {weekend ? (
+          <p className="text-zinc-600">
+            Pas de pari le week-end — on se retrouve lundi ! 🛌
+          </p>
+        ) : suspended ? (
           <p className="text-zinc-600">
             {`Pas de pari aujourd'hui — ${targetName()} n'est pas attendu (jour suspendu). 🏖️`}
           </p>
@@ -137,6 +144,8 @@ export default async function HomePage() {
           </ul>
         )}
       </section>
+
+      <BetCalendar />
     </div>
   );
 }
