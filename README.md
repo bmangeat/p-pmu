@@ -76,7 +76,17 @@ Classement général + graphique de l'historique des arrivées.
 ## Administrateur
 
 Les emails listés dans `ADMIN_EMAILS` (séparés par des virgules) ont accès à
-la page `/admin` pour saisir l'heure d'arrivée réelle de chaque jour.
+la page `/admin` pour saisir le résultat du jour et suspendre des jours. Les admins
+sont **validés d'office** (voir ci-dessous).
+
+## Accès & validation des comptes
+
+- L'accès est **réservé aux connectés** : toute page du jeu redirige vers `/login` sans session.
+- Un **nouveau compte** doit saisir un **code à 6 chiffres** sur `/verify` pour être validé.
+- Ce code est affiché sur `/admin`, **change toutes les heures** (dérivé de `AUTH_SECRET`
+  + l'heure courante, sans cron ni stockage) — l'admin le communique aux participants.
+- Une fois validé, l'utilisateur n'a plus jamais à le ressaisir (champ `User.verified`).
+- ⚠️ Le code dépend de `AUTH_SECRET` : garde la même valeur en production, sinon les codes changent.
 
 ## Connexion Google (pour la production)
 
