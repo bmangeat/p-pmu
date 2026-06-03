@@ -3,10 +3,12 @@ import { auth } from "@/auth";
 import { prisma } from "@/lib/prisma";
 import { reopenDayAction, toggleSuspendDayAction } from "@/lib/actions";
 import {
+  currentValidationCode,
   formatDateLabel,
   minutesToHHMM,
   targetName,
   todayDateString,
+  validationCodeExpiry,
 } from "@/lib/config";
 import AdminForm from "@/components/AdminForm";
 
@@ -52,6 +54,17 @@ export default async function AdminPage() {
           paris et calcule les scores. Tu peux aussi suspendre un jour sans pari.
         </p>
       </div>
+
+      <section className="rounded-2xl border border-violet-200 bg-violet-50 p-5">
+        <h2 className="text-lg font-bold text-zinc-900">🔐 Code de validation</h2>
+        <p className="mt-1 text-sm text-zinc-500">
+          À communiquer aux nouveaux participants pour valider leur compte. Il change
+          toutes les heures (valable jusqu&apos;à {validationCodeExpiry()}).
+        </p>
+        <p className="mt-3 font-mono text-4xl font-extrabold tracking-[0.3em] text-violet-700">
+          {currentValidationCode()}
+        </p>
+      </section>
 
       <section className="rounded-2xl border border-amber-100 bg-white p-5 shadow-sm">
         <h2 className="mb-3 text-lg font-bold text-zinc-900">Résultat du jour</h2>

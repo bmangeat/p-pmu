@@ -1,4 +1,5 @@
 // Configuration et règles métier centralisées.
+import { createHmac } from "crypto";
 
 // Fuseau horaire du bureau : sert à déterminer "le jour" et à afficher les heures.
 export const OFFICE_TZ = "Europe/Paris";
@@ -87,4 +88,45 @@ export function adminEmails(): string[] {
 export function isAdminEmail(email?: string | null): boolean {
   if (!email) return false;
   return adminEmails().includes(email.toLowerCase());
+}
+
+// ----- Code de validation des comptes -----
+// Code à 6 chiffres dérivé de AUTH_SECRET + l'heure courante (change chaque heure,
+// sans cron ni stockage). Affiché sur /admin, demandé aux nouveaux comptes.
+
+const HOUR_MS = 3600_000;
+
+function codeForBucket(bucket: number): string {
+  const secret = process.env.AUTH_SECRET || "dev-secret";
+  const digest = createHmac("sha256", secret)
+    .update(`account-validation:${bucket}`)
+    .digest("hex");
+  const n = parseInt(digest.slice(0, 8), 16) % 1_000_000;
+  return String(n).padStart(6, "0");
+}
+
+export function currentValidationCode(date = new Date()): string {
+  return codeForBucket(Math.floor(date.getTime() / HOUR_MS));
+}
+
+// Accepte le code de l'heure courante ET de l'heure précédente (tolérance de bascule).
+export function isValidValidationCode(input: string): boolean {
+  const clean = (input || "").replace(/\s/g, "");
+  if (!/^\d{6}$/.test(clean)) return false;
+  const bucket = Math.floor(Date.now() / HOUR_MS);
+  return clean === codeForBucket(bucket) || clean === codeForBucket(bucket - 1);
+}
+
+// Heure (HH:mm) à laquelle le code courant expire (prochaine heure pleine).
+export function validationCodeExpiry(date = new Date()): string {
+  const next = (Math.floor(date.getTime() / HOUR_MS) + 1) * HOUR_MS;
+  return minutesToHHMM(
+    Number(
+      new Intl.DateTimeFormat("fr-FR", {
+        timeZone: OFFICE_TZ,
+        hour: "2-digit",
+        hour12: false,
+      }).format(new Date(next)).slice(0, 2),
+    ) * 60,
+  );
 }

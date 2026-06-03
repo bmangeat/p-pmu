@@ -1,11 +1,37 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import { redirect } from "next/navigation";
 import { auth } from "@/auth";
 import { prisma } from "@/lib/prisma";
-import { scoreBet, hhmmToMinutes, todayDateString } from "@/lib/config";
+import {
+  scoreBet,
+  hhmmToMinutes,
+  todayDateString,
+  isValidValidationCode,
+} from "@/lib/config";
 
 export type ActionState = { ok?: boolean; error?: string; message?: string };
+
+// Valider son compte avec le code horaire (affiché sur /admin).
+export async function verifyAccountAction(
+  _prev: ActionState,
+  formData: FormData,
+): Promise<ActionState> {
+  const session = await auth();
+  if (!session?.user?.id) return { error: "Tu dois être connecté." };
+
+  if (!isValidValidationCode(String(formData.get("code") ?? ""))) {
+    return { error: "Code invalide ou expiré. Demande le code du moment à un admin." };
+  }
+
+  await prisma.user.update({
+    where: { id: session.user.id },
+    data: { verified: true },
+  });
+
+  redirect("/");
+}
 
 function revalidateAll() {
   revalidatePath("/");
