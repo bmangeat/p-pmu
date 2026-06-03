@@ -13,10 +13,14 @@ Classement général + graphique de l'historique des arrivées.
 
 ## Règles du jeu
 
-- Les paris du jour restent **ouverts** tant qu'un admin n'a pas saisi l'heure réelle.
-- Dès la saisie de l'heure réelle, le jour est **clôturé** et les scores calculés.
-- **Barème** (modifiable dans `src/lib/config.ts`) :
-  `score = 100 − écart_en_minutes` (plancher 0) **+ 50** si l'heure est devinée pile.
+- Chaque pari est soit une **heure d'arrivée**, soit **« Absent »** (il ne viendra pas).
+- Les paris restent **ouverts** tant qu'un admin n'a pas saisi le résultat (présent à une
+  heure, ou absent). À la saisie, le jour est **clôturé** et les scores calculés.
+- L'admin peut **suspendre** un jour (congé, télétravail…) : aucun pari, aucun point. Réversible.
+- **Barème** (modifiable dans `src/lib/config.ts`, fonction `scoreBet`) :
+  - Présent bien deviné : `100 − écart_en_minutes` (plancher 0) **+ 50** si pile.
+  - « Absent » bien deviné : **25 pts** (forfait, moins impactant).
+  - Mauvaise prédiction de présence : **0**.
 
 ---
 
