@@ -12,8 +12,9 @@ export default async function VerifyPage() {
 
   const user = await prisma.user.findUnique({
     where: { id: session.user.id },
-    select: { verified: true },
+    select: { verified: true, active: true },
   });
+  if (!user?.active) redirect("/desactive");
   if (user?.verified) redirect("/");
 
   return (

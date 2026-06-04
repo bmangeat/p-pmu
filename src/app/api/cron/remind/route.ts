@@ -26,7 +26,7 @@ export async function GET(req: Request) {
   const alreadyBet = new Set((day?.bets ?? []).map((b) => b.userId));
 
   const users = await prisma.user.findMany({
-    where: { notifyEmail: true, email: { not: null } },
+    where: { notifyEmail: true, active: true, email: { not: null } },
     select: { id: true, name: true, email: true },
   });
 

@@ -147,7 +147,14 @@ export async function getUsersWithVisibility() {
   const [users, games, hidden] = await Promise.all([
     prisma.user.findMany({
       orderBy: { createdAt: "asc" },
-      select: { id: true, name: true, email: true, verified: true, notifyEmail: true },
+      select: {
+        id: true,
+        name: true,
+        email: true,
+        verified: true,
+        active: true,
+        notifyEmail: true,
+      },
     }),
     prisma.pickGame.findMany({
       orderBy: { createdAt: "desc" },

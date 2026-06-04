@@ -19,6 +19,10 @@ cumule les points de tous les paris (arrivée + défis). Gestion des défis : `/
 **masquer un pari à un utilisateur précis** (l'arrivée ou un défi). Un pari masqué disparaît de son hub,
 son accès direct est bloqué (redirection), et il n'est plus relancé par email. Les admins voient tout.
 
+**Désactivation de compte** : l'admin peut **désactiver** un utilisateur (`User.active=false`) depuis
+`/admin/utilisateurs`. Un compte désactivé est redirigé vers `/desactive` (accès révoqué à toute la
+plateforme) et exclu des emails. Réversible.
+
 ## Stack
 
 - **Next.js 16** (App Router, server-side) + **TypeScript** + **Tailwind CSS v4**

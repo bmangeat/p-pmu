@@ -2,7 +2,7 @@ import Link from "next/link";
 import { auth } from "@/auth";
 import { getUsersWithVisibility } from "@/lib/data";
 import { isAdminEmail } from "@/lib/config";
-import { setBetVisibilityAction } from "@/lib/actions";
+import { setBetVisibilityAction, setUserActiveAction } from "@/lib/actions";
 
 export const dynamic = "force-dynamic";
 
@@ -27,6 +27,10 @@ export default async function AdminUsersPage() {
   async function setVisibility(formData: FormData) {
     "use server";
     await setBetVisibilityAction({}, formData);
+  }
+  async function setActive(formData: FormData) {
+    "use server";
+    await setUserActiveAction({}, formData);
   }
 
   return (
@@ -68,6 +72,26 @@ export default async function AdminUsersPage() {
                   <span className="rounded-full bg-emerald-100 px-2 py-0.5 text-xs font-medium text-emerald-700">
                     rappels mail
                   </span>
+                )}
+                {!u.active && !admin && (
+                  <span className="rounded-full bg-rose-100 px-2 py-0.5 text-xs font-medium text-rose-600">
+                    désactivé
+                  </span>
+                )}
+                {!admin && (
+                  <form action={setActive} className="ml-auto">
+                    <input type="hidden" name="userId" value={u.id} />
+                    <input type="hidden" name="active" value={u.active ? "0" : "1"} />
+                    <button
+                      className={`rounded-full px-3 py-1 text-xs font-semibold ${
+                        u.active
+                          ? "border border-rose-200 text-rose-600 hover:bg-rose-50"
+                          : "border border-emerald-200 text-emerald-700 hover:bg-emerald-50"
+                      }`}
+                    >
+                      {u.active ? "Désactiver le compte" : "Réactiver le compte"}
+                    </button>
+                  </form>
                 )}
               </div>
 

@@ -316,6 +316,23 @@ export async function deletePickGameAction(
   return { ok: true, message: "Défi supprimé." };
 }
 
+// Activer / désactiver un compte utilisateur (admin) : révoque l'accès si désactivé.
+export async function setUserActiveAction(
+  _prev: ActionState,
+  formData: FormData,
+): Promise<ActionState> {
+  const session = await auth();
+  if (!session?.user?.isAdmin) return { error: "Action réservée aux administrateurs." };
+
+  const userId = String(formData.get("userId") ?? "");
+  if (!userId) return { error: "Utilisateur manquant." };
+  const active = String(formData.get("active") ?? "") === "1";
+
+  await prisma.user.update({ where: { id: userId }, data: { active } });
+  revalidatePath("/admin/utilisateurs");
+  return { ok: true, message: active ? "Compte réactivé." : "Compte désactivé." };
+}
+
 // Masquer / afficher un pari pour un utilisateur précis (admin).
 export async function setBetVisibilityAction(
   _prev: ActionState,
