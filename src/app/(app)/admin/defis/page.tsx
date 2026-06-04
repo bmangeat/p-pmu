@@ -198,6 +198,18 @@ export default async function AdminDefisPage() {
                         </li>
                       ))}
                     </ul>
+                    <form action={addCand} className="mt-3 flex flex-wrap items-center gap-2 border-t border-zinc-200 pt-3">
+                      <input type="hidden" name="gameId" value={g.id} />
+                      <input
+                        name="name"
+                        required
+                        placeholder="Ajouter une personne oubliée…"
+                        className="grow rounded-xl border border-zinc-200 bg-white px-3 py-1.5 text-sm text-zinc-900"
+                      />
+                      <button className="rounded-full bg-violet-600 px-4 py-1.5 text-xs font-semibold text-white hover:bg-violet-500">
+                        + Ajouter
+                      </button>
+                    </form>
                   </details>
                 )}
 
@@ -225,22 +237,6 @@ export default async function AdminDefisPage() {
                       </label>
                       <button className="rounded-full bg-orange-500 px-4 py-2 text-sm font-semibold text-white hover:bg-orange-400">
                         Clôturer & noter
-                      </button>
-                    </form>
-
-                    <form action={addCand} className="flex flex-wrap items-end gap-2">
-                      <input type="hidden" name="gameId" value={g.id} />
-                      <label className="flex flex-col gap-1 text-sm font-medium text-zinc-600">
-                        Ajouter une personne
-                        <input
-                          name="name"
-                          required
-                          placeholder="Prénom"
-                          className="rounded-xl border border-zinc-200 bg-white px-3 py-2 text-zinc-900"
-                        />
-                      </label>
-                      <button className="rounded-full border border-zinc-200 px-4 py-2 text-sm font-semibold text-zinc-700 hover:bg-zinc-100">
-                        Ajouter
                       </button>
                     </form>
                   </div>
