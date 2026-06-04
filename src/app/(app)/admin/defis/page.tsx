@@ -8,6 +8,7 @@ import {
   renameCandidateAction,
   reopenPickGameAction,
   resolvePickGameAction,
+  setVotersVisibilityAction,
   updatePickGameAction,
 } from "@/lib/actions";
 import CreatePickGameForm from "@/components/CreatePickGameForm";
@@ -62,6 +63,10 @@ export default async function AdminDefisPage() {
   async function delCand(formData: FormData) {
     "use server";
     await deleteCandidateAction({}, formData);
+  }
+  async function toggleVoters(formData: FormData) {
+    "use server";
+    await setVotersVisibilityAction({}, formData);
   }
 
   return (
@@ -118,6 +123,21 @@ export default async function AdminDefisPage() {
                     {closed ? "clôturé" : "ouvert"}
                   </span>
                 </div>
+
+                {/* Visibilité des votants */}
+                <form action={toggleVoters} className="flex items-center gap-3">
+                  <input type="hidden" name="gameId" value={g.id} />
+                  <input type="hidden" name="show" value={g.showVoters ? "0" : "1"} />
+                  <span className="text-sm text-zinc-600">
+                    Affichage « qui a voté quoi » :{" "}
+                    <span className="font-medium">
+                      {g.showVoters ? "visible" : "masqué"}
+                    </span>
+                  </span>
+                  <button className="rounded-full border border-zinc-200 px-3 py-1 text-xs font-semibold text-zinc-700 hover:bg-zinc-100">
+                    {g.showVoters ? "🙈 Masquer" : "👁️ Afficher"}
+                  </button>
+                </form>
 
                 {/* Édition titre / description */}
                 <details className="rounded-xl border border-zinc-200 bg-zinc-50 p-3">

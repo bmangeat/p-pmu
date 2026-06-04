@@ -87,11 +87,21 @@ export default async function DefiPage({
         </ul>
       </section>
 
-      {/* Qui a voté quoi */}
-      {voters.length > 0 && (
+      {/* Qui a voté quoi — visible si l'admin l'autorise (et toujours pour les admins) */}
+      {voters.length > 0 && !game.showVoters && !session.user.isAdmin && (
+        <p className="text-sm text-zinc-400">
+          🔒 Votes anonymes : qui a voté pour qui n&apos;est pas affiché.
+        </p>
+      )}
+      {voters.length > 0 && (game.showVoters || session.user.isAdmin) && (
         <section>
           <h2 className="mb-3 text-lg font-bold text-zinc-900">
             Votants <span className="text-zinc-400">({voters.length})</span>
+            {!game.showVoters && (
+              <span className="ml-2 text-xs font-normal text-amber-600">
+                (masqué pour les participants)
+              </span>
+            )}
           </h2>
           <ul className="divide-y divide-zinc-100 overflow-hidden rounded-2xl border border-amber-100 bg-white shadow-sm">
             {voters.map((v) => {

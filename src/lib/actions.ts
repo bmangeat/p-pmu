@@ -121,6 +121,24 @@ export async function updatePickGameAction(
   return { ok: true, message: "Défi mis à jour." };
 }
 
+// Afficher / masquer aux participants qui a voté pour qui (admin).
+export async function setVotersVisibilityAction(
+  _prev: ActionState,
+  formData: FormData,
+): Promise<ActionState> {
+  const session = await auth();
+  if (!session?.user?.isAdmin) return { error: "Action réservée aux administrateurs." };
+
+  const gameId = String(formData.get("gameId") ?? "");
+  if (!gameId) return { error: "Défi manquant." };
+  const show = String(formData.get("show") ?? "") === "1";
+
+  await prisma.pickGame.update({ where: { id: gameId }, data: { showVoters: show } });
+  revalidatePath(`/defis/${gameId}`);
+  revalidateGames();
+  return { ok: true, message: show ? "Votants visibles." : "Votants masqués." };
+}
+
 // Renommer une personne d'un défi (admin).
 export async function renameCandidateAction(
   _prev: ActionState,

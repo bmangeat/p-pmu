@@ -107,6 +107,7 @@ model PickGame {
   title             String
   description       String?
   status            String    @default("open") // "open" | "closed"
+  showVoters        Boolean   @default(true) // afficher aux participants qui a voté pour qui
   winnerCandidateId String? // candidat désigné gagnant à la clôture
   createdAt         DateTime  @default(now())
   closedAt          DateTime?
