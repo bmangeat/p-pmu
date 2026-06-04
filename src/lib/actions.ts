@@ -98,6 +98,74 @@ export async function createPickGameAction(
   return { ok: true, message: "Défi créé." };
 }
 
+// Modifier le titre / la description d'un défi (admin).
+export async function updatePickGameAction(
+  _prev: ActionState,
+  formData: FormData,
+): Promise<ActionState> {
+  const session = await auth();
+  if (!session?.user?.isAdmin) return { error: "Action réservée aux administrateurs." };
+
+  const gameId = String(formData.get("gameId") ?? "");
+  const title = String(formData.get("title") ?? "").trim();
+  if (!gameId || !title) return { error: "Le titre est obligatoire." };
+  const description = String(formData.get("description") ?? "").trim() || null;
+
+  await prisma.pickGame.update({
+    where: { id: gameId },
+    data: { title, description },
+  });
+
+  revalidatePath(`/defis/${gameId}`);
+  revalidateGames();
+  return { ok: true, message: "Défi mis à jour." };
+}
+
+// Renommer une personne d'un défi (admin).
+export async function renameCandidateAction(
+  _prev: ActionState,
+  formData: FormData,
+): Promise<ActionState> {
+  const session = await auth();
+  if (!session?.user?.isAdmin) return { error: "Action réservée aux administrateurs." };
+
+  const gameId = String(formData.get("gameId") ?? "");
+  const candidateId = String(formData.get("candidateId") ?? "");
+  const name = String(formData.get("name") ?? "").trim();
+  if (!candidateId || !name) return { error: "Nom manquant." };
+
+  await prisma.candidate.update({ where: { id: candidateId }, data: { name } });
+  revalidatePath(`/defis/${gameId}`);
+  revalidateGames();
+  return { ok: true, message: "Personne renommée." };
+}
+
+// Supprimer une personne d'un défi (admin) — uniquement si le défi est ouvert.
+export async function deleteCandidateAction(
+  _prev: ActionState,
+  formData: FormData,
+): Promise<ActionState> {
+  const session = await auth();
+  if (!session?.user?.isAdmin) return { error: "Action réservée aux administrateurs." };
+
+  const candidateId = String(formData.get("candidateId") ?? "");
+  if (!candidateId) return { error: "Personne manquante." };
+
+  const candidate = await prisma.candidate.findUnique({
+    where: { id: candidateId },
+    include: { game: true },
+  });
+  if (!candidate) return { error: "Personne introuvable." };
+  if (candidate.game.status !== "open") {
+    return { error: "Rouvre le défi pour modifier la liste des personnes." };
+  }
+
+  await prisma.candidate.delete({ where: { id: candidateId } });
+  revalidatePath(`/defis/${candidate.gameId}`);
+  revalidateGames();
+  return { ok: true, message: "Personne supprimée." };
+}
+
 // Ajouter une personne à un défi (admin).
 export async function addCandidateAction(
   _prev: ActionState,

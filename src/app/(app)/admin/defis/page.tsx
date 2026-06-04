@@ -3,9 +3,12 @@ import { auth } from "@/auth";
 import { prisma } from "@/lib/prisma";
 import {
   addCandidateAction,
+  deleteCandidateAction,
   deletePickGameAction,
+  renameCandidateAction,
   reopenPickGameAction,
   resolvePickGameAction,
+  updatePickGameAction,
 } from "@/lib/actions";
 import CreatePickGameForm from "@/components/CreatePickGameForm";
 
@@ -47,6 +50,18 @@ export default async function AdminDefisPage() {
   async function addCand(formData: FormData) {
     "use server";
     await addCandidateAction({}, formData);
+  }
+  async function updateGame(formData: FormData) {
+    "use server";
+    await updatePickGameAction({}, formData);
+  }
+  async function renameCand(formData: FormData) {
+    "use server";
+    await renameCandidateAction({}, formData);
+  }
+  async function delCand(formData: FormData) {
+    "use server";
+    await deleteCandidateAction({}, formData);
   }
 
   return (
@@ -103,6 +118,68 @@ export default async function AdminDefisPage() {
                     {closed ? "clôturé" : "ouvert"}
                   </span>
                 </div>
+
+                {/* Édition titre / description */}
+                <details className="rounded-xl border border-zinc-200 bg-zinc-50 p-3">
+                  <summary className="cursor-pointer text-sm font-semibold text-zinc-700">
+                    ✏️ Modifier le titre / la description
+                  </summary>
+                  <form action={updateGame} className="mt-3 space-y-2">
+                    <input type="hidden" name="gameId" value={g.id} />
+                    <input
+                      name="title"
+                      defaultValue={g.title}
+                      required
+                      className="w-full rounded-xl border border-zinc-200 bg-white px-3 py-2 text-zinc-900"
+                    />
+                    <input
+                      name="description"
+                      defaultValue={g.description ?? ""}
+                      placeholder="Description (optionnel)"
+                      className="w-full rounded-xl border border-zinc-200 bg-white px-3 py-2 text-zinc-900"
+                    />
+                    <button className="rounded-full bg-zinc-800 px-4 py-2 text-sm font-semibold text-white hover:bg-zinc-700">
+                      Enregistrer
+                    </button>
+                  </form>
+                </details>
+
+                {/* Édition de la liste des personnes (défi ouvert) */}
+                {!closed && (
+                  <details className="rounded-xl border border-zinc-200 bg-zinc-50 p-3">
+                    <summary className="cursor-pointer text-sm font-semibold text-zinc-700">
+                      👥 Modifier les personnes ({g.candidates.length})
+                    </summary>
+                    <ul className="mt-3 space-y-2">
+                      {g.candidates.map((c) => (
+                        <li key={c.id} className="flex flex-wrap items-center gap-2">
+                          <form action={renameCand} className="flex items-center gap-2">
+                            <input type="hidden" name="gameId" value={g.id} />
+                            <input type="hidden" name="candidateId" value={c.id} />
+                            <input
+                              name="name"
+                              defaultValue={c.name}
+                              required
+                              className="rounded-xl border border-zinc-200 bg-white px-3 py-1.5 text-sm text-zinc-900"
+                            />
+                            <button className="rounded-full border border-zinc-200 px-3 py-1.5 text-xs font-semibold text-zinc-700 hover:bg-zinc-100">
+                              Renommer
+                            </button>
+                          </form>
+                          <form action={delCand}>
+                            <input type="hidden" name="candidateId" value={c.id} />
+                            <button
+                              className="rounded-full px-2 py-1.5 text-xs font-semibold text-rose-500 hover:bg-rose-50"
+                              title="Supprimer"
+                            >
+                              ✕
+                            </button>
+                          </form>
+                        </li>
+                      ))}
+                    </ul>
+                  </details>
+                )}
 
                 {!closed ? (
                   <div className="flex flex-wrap items-end gap-4">
