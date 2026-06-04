@@ -62,6 +62,12 @@ export default async function AdminPage() {
           Saisis le résultat du jour (présent à une heure, ou absent) — cela clôture les
           paris et calcule les scores. Tu peux aussi suspendre un jour sans pari.
         </p>
+        <Link
+          href="/admin/defis"
+          className="mt-2 inline-block font-semibold text-violet-600 hover:text-violet-500"
+        >
+          🗳️ Gérer les défis (votes sur liste) →
+        </Link>
       </div>
 
       <section className="rounded-2xl border border-violet-200 bg-violet-50 p-5">

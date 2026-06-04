@@ -4,6 +4,17 @@ Petite plateforme de pari de bureau : chaque jour, on parie sur l'heure d'arriv�
 du retardataire. Plus on est proche de l'heure réelle, plus on marque de points.
 Classement général + graphique de l'historique des arrivées.
 
+## Plateforme multi-paris
+
+P-PMU héberge plusieurs paris :
+- **Heure d'arrivée** (`/arrivee`) : le pari quotidien historique (heure ou « absent »).
+- **Défis** (`/defis/[id]`) : paris « vote sur une liste de personnes » (ex. *prochaine personne à
+  quitter la boîte ?*). L'admin crée le défi + la liste, les gens votent, l'admin désigne le gagnant.
+  Vote correct = **100 pts** (constante `SCORE.PICK_CORRECT`).
+
+L'**accueil (`/`)** est un **hub** qui liste tous les paris en cours. Le **classement** (`/classement`)
+cumule les points de tous les paris (arrivée + défis). Gestion des défis : `/admin/defis`.
+
 ## Stack
 
 - **Next.js 16** (App Router, server-side) + **TypeScript** + **Tailwind CSS v4**

@@ -7,7 +7,7 @@ export default async function Header() {
   const user = session?.user;
 
   const links = [
-    { href: "/", label: "Pari du jour" },
+    { href: "/", label: "Accueil" },
     { href: "/classement", label: "Classement" },
     { href: "/historique", label: "Historique" },
   ];

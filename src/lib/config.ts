@@ -17,6 +17,7 @@ export const SCORE = {
   PENALTY_PER_MIN: 1,
   EXACT_BONUS: 50,
   ABSENT_CORRECT: 25,
+  PICK_CORRECT: 100, // vote correct sur un défi "liste de personnes"
 };
 
 export type BetInput = { predictedMin: number | null; predictedAbsent: boolean };

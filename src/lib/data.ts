@@ -37,32 +37,105 @@ export type LeaderboardEntry = {
   games: number;
 };
 
-// Classement global : somme des points par joueur (jours notés uniquement).
+// Classement global : somme des points (paris d'arrivée + votes des défis).
 export async function getLeaderboard(): Promise<LeaderboardEntry[]> {
-  const grouped = await prisma.bet.groupBy({
-    by: ["userId"],
-    where: { points: { not: null } },
-    _sum: { points: true },
-    _count: { _all: true },
-  });
+  const [betGroups, voteGroups] = await Promise.all([
+    prisma.bet.groupBy({
+      by: ["userId"],
+      where: { points: { not: null } },
+      _sum: { points: true },
+      _count: { _all: true },
+    }),
+    prisma.vote.groupBy({
+      by: ["userId"],
+      where: { points: { not: null } },
+      _sum: { points: true },
+      _count: { _all: true },
+    }),
+  ]);
+
+  const agg = new Map<string, { points: number; games: number }>();
+  const add = (userId: string, points: number, games: number) => {
+    const e = agg.get(userId) ?? { points: 0, games: 0 };
+    e.points += points;
+    e.games += games;
+    agg.set(userId, e);
+  };
+  for (const g of betGroups) add(g.userId, g._sum.points ?? 0, g._count._all);
+  for (const g of voteGroups) add(g.userId, g._sum.points ?? 0, g._count._all);
 
   const users = await prisma.user.findMany({
-    where: { id: { in: grouped.map((g) => g.userId) } },
+    where: { id: { in: [...agg.keys()] } },
   });
   const userById = new Map(users.map((u) => [u.id, u]));
 
-  return grouped
-    .map((g) => {
-      const u = userById.get(g.userId);
+  return [...agg.entries()]
+    .map(([userId, { points, games }]) => {
+      const u = userById.get(userId);
       return {
-        userId: g.userId,
+        userId,
         name: u?.name || u?.email || "Anonyme",
         image: u?.image ?? null,
-        totalPoints: g._sum.points ?? 0,
-        games: g._count._all,
+        totalPoints: points,
+        games,
       };
     })
     .sort((a, b) => b.totalPoints - a.totalPoints);
+}
+
+export type ArrivalStatus = "weekend" | "suspended" | "closed" | "open";
+
+// Données du hub d'accueil : résumé du pari d'arrivée + défis ouverts/terminés.
+export async function getHubData(userId: string) {
+  const arrival = await getTodayState(userId);
+  const arrivalStatus: ArrivalStatus = arrival.weekend
+    ? "weekend"
+    : arrival.suspended
+      ? "suspended"
+      : arrival.closed
+        ? "closed"
+        : "open";
+
+  const openGames = await prisma.pickGame.findMany({
+    where: { status: "open" },
+    orderBy: { createdAt: "desc" },
+    include: {
+      _count: { select: { votes: true } },
+      votes: { where: { userId }, select: { candidateId: true } },
+    },
+  });
+
+  const closedGames = await prisma.pickGame.findMany({
+    where: { status: "closed" },
+    orderBy: { closedAt: "desc" },
+    take: 10,
+    include: {
+      candidates: { select: { id: true, name: true } },
+      _count: { select: { votes: true } },
+    },
+  });
+
+  return { arrival, arrivalStatus, openGames, closedGames };
+}
+
+// Détail d'un défi : candidats, décompte des votes, vote de l'utilisateur, gagnant.
+export async function getPickGame(id: string, userId: string) {
+  const game = await prisma.pickGame.findUnique({
+    where: { id },
+    include: {
+      candidates: { orderBy: { name: "asc" } },
+      votes: { include: { user: { select: { id: true, name: true, email: true } } } },
+    },
+  });
+  if (!game) return null;
+
+  const counts = new Map<string, number>();
+  for (const v of game.votes) {
+    counts.set(v.candidateId, (counts.get(v.candidateId) ?? 0) + 1);
+  }
+  const myVote = game.votes.find((v) => v.userId === userId)?.candidateId ?? null;
+
+  return { game, counts, myVote };
 }
 
 // Historique des jours résolus (présent ou absent) pour le tableau et le graphique.

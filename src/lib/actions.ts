@@ -10,6 +10,7 @@ import {
   todayDateString,
   isWeekend,
   targetName,
+  SCORE,
 } from "@/lib/config";
 import { regenerateValidationCode, verifyAndConsume } from "@/lib/validation-code";
 import { sendReminderEmail } from "@/lib/email";
@@ -53,6 +54,172 @@ export async function setNotifyEmailAction(
       ? "Rappels par email activés."
       : "Rappels par email désactivés.",
   };
+}
+
+// ---- Défis (vote sur une liste de personnes) ----
+
+function revalidateGames() {
+  revalidatePath("/");
+  revalidatePath("/classement");
+  revalidatePath("/admin");
+}
+
+// Créer un défi avec une liste de personnes (admin).
+export async function createPickGameAction(
+  _prev: ActionState,
+  formData: FormData,
+): Promise<ActionState> {
+  const session = await auth();
+  if (!session?.user?.isAdmin) return { error: "Action réservée aux administrateurs." };
+
+  const title = String(formData.get("title") ?? "").trim();
+  if (!title) return { error: "Donne un titre au défi." };
+  const description = String(formData.get("description") ?? "").trim() || null;
+
+  const names = Array.from(
+    new Set(
+      String(formData.get("candidates") ?? "")
+        .split("\n")
+        .map((s) => s.trim())
+        .filter(Boolean),
+    ),
+  );
+  if (names.length < 2) return { error: "Ajoute au moins 2 personnes (une par ligne)." };
+
+  await prisma.pickGame.create({
+    data: {
+      title,
+      description,
+      candidates: { create: names.map((name) => ({ name })) },
+    },
+  });
+
+  revalidateGames();
+  return { ok: true, message: "Défi créé." };
+}
+
+// Ajouter une personne à un défi (admin).
+export async function addCandidateAction(
+  _prev: ActionState,
+  formData: FormData,
+): Promise<ActionState> {
+  const session = await auth();
+  if (!session?.user?.isAdmin) return { error: "Action réservée aux administrateurs." };
+
+  const gameId = String(formData.get("gameId") ?? "");
+  const name = String(formData.get("name") ?? "").trim();
+  if (!gameId || !name) return { error: "Nom manquant." };
+
+  await prisma.candidate.create({ data: { gameId, name } });
+  revalidatePath(`/defis/${gameId}`);
+  revalidateGames();
+  return { ok: true, message: "Personne ajoutée." };
+}
+
+// Voter (ou changer son vote) pour un candidat (utilisateur connecté).
+export async function voteAction(
+  _prev: ActionState,
+  formData: FormData,
+): Promise<ActionState> {
+  const session = await auth();
+  if (!session?.user?.id) return { error: "Tu dois être connecté pour voter." };
+
+  const gameId = String(formData.get("gameId") ?? "");
+  const candidateId = String(formData.get("candidateId") ?? "");
+  if (!gameId || !candidateId) return { error: "Choix manquant." };
+
+  const game = await prisma.pickGame.findUnique({ where: { id: gameId } });
+  if (!game) return { error: "Défi introuvable." };
+  if (game.status !== "open") return { error: "Les votes sont clôturés pour ce défi." };
+
+  const candidate = await prisma.candidate.findFirst({
+    where: { id: candidateId, gameId },
+  });
+  if (!candidate) return { error: "Candidat invalide." };
+
+  await prisma.vote.upsert({
+    where: { gameId_userId: { gameId, userId: session.user.id } },
+    update: { candidateId },
+    create: { gameId, userId: session.user.id, candidateId },
+  });
+
+  revalidatePath(`/defis/${gameId}`);
+  revalidatePath("/");
+  return { ok: true, message: "Vote enregistré !" };
+}
+
+// Désigner le gagnant et clôturer un défi (admin) : calcule les scores.
+export async function resolvePickGameAction(
+  _prev: ActionState,
+  formData: FormData,
+): Promise<ActionState> {
+  const session = await auth();
+  if (!session?.user?.isAdmin) return { error: "Action réservée aux administrateurs." };
+
+  const gameId = String(formData.get("gameId") ?? "");
+  const candidateId = String(formData.get("candidateId") ?? "");
+  if (!gameId || !candidateId) return { error: "Sélectionne le gagnant." };
+
+  const candidate = await prisma.candidate.findFirst({
+    where: { id: candidateId, gameId },
+  });
+  if (!candidate) return { error: "Candidat invalide." };
+
+  const votes = await prisma.vote.findMany({ where: { gameId } });
+  await prisma.$transaction([
+    prisma.pickGame.update({
+      where: { id: gameId },
+      data: { status: "closed", winnerCandidateId: candidateId, closedAt: new Date() },
+    }),
+    ...votes.map((v) =>
+      prisma.vote.update({
+        where: { id: v.id },
+        data: { points: v.candidateId === candidateId ? SCORE.PICK_CORRECT : 0 },
+      }),
+    ),
+  ]);
+
+  revalidatePath(`/defis/${gameId}`);
+  revalidateGames();
+  return { ok: true, message: `Gagnant désigné, ${votes.length} vote(s) noté(s).` };
+}
+
+// Rouvrir un défi clôturé (admin) : efface gagnant et scores.
+export async function reopenPickGameAction(
+  _prev: ActionState,
+  formData: FormData,
+): Promise<ActionState> {
+  const session = await auth();
+  if (!session?.user?.isAdmin) return { error: "Action réservée aux administrateurs." };
+
+  const gameId = String(formData.get("gameId") ?? "");
+  if (!gameId) return { error: "Défi manquant." };
+
+  await prisma.vote.updateMany({ where: { gameId }, data: { points: null } });
+  await prisma.pickGame.update({
+    where: { id: gameId },
+    data: { status: "open", winnerCandidateId: null, closedAt: null },
+  });
+
+  revalidatePath(`/defis/${gameId}`);
+  revalidateGames();
+  return { ok: true, message: "Défi rouvert." };
+}
+
+// Supprimer un défi (admin).
+export async function deletePickGameAction(
+  _prev: ActionState,
+  formData: FormData,
+): Promise<ActionState> {
+  const session = await auth();
+  if (!session?.user?.isAdmin) return { error: "Action réservée aux administrateurs." };
+
+  const gameId = String(formData.get("gameId") ?? "");
+  if (!gameId) return { error: "Défi manquant." };
+
+  await prisma.pickGame.delete({ where: { id: gameId } });
+  revalidateGames();
+  return { ok: true, message: "Défi supprimé." };
 }
 
 // Envoyer un email de test (admin) à sa propre adresse, pour vérifier la config Brevo.

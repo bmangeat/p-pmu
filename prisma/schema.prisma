@@ -29,6 +29,7 @@ model User {
   accounts Account[]
   sessions Session[]
   bets     Bet[]
+  votes    Vote[]
 }
 
 model Account {
@@ -96,4 +97,46 @@ model Bet {
   day  ArrivalDay @relation(fields: [dayId], references: [id], onDelete: Cascade)
 
   @@unique([userId, dayId])
+}
+
+// ---- Défis : pari "vote sur une liste de personnes" ----
+
+// Un défi : une question (ex. "Prochaine personne à quitter la boîte ?") + des candidats.
+model PickGame {
+  id                String    @id @default(cuid())
+  title             String
+  description       String?
+  status            String    @default("open") // "open" | "closed"
+  winnerCandidateId String? // candidat désigné gagnant à la clôture
+  createdAt         DateTime  @default(now())
+  closedAt          DateTime?
+
+  candidates Candidate[]
+  votes      Vote[]
+}
+
+// Une personne proposée au vote dans un défi.
+model Candidate {
+  id     String @id @default(cuid())
+  gameId String
+  name   String
+
+  game  PickGame @relation(fields: [gameId], references: [id], onDelete: Cascade)
+  votes Vote[]
+}
+
+// Le vote d'un utilisateur pour un candidat dans un défi.
+model Vote {
+  id          String   @id @default(cuid())
+  gameId      String
+  userId      String
+  candidateId String
+  points      Int? // attribué à la clôture (100 si bon candidat, 0 sinon)
+  createdAt   DateTime @default(now())
+
+  game      PickGame  @relation(fields: [gameId], references: [id], onDelete: Cascade)
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  candidate Candidate @relation(fields: [candidateId], references: [id], onDelete: Cascade)
+
+  @@unique([gameId, userId])
 }
