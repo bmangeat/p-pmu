@@ -1,13 +1,22 @@
 import Link from "next/link";
+import { redirect } from "next/navigation";
 import { auth } from "@/auth";
-import { getTodayState } from "@/lib/data";
-import { formatDateLabel, minutesToHHMM, targetName } from "@/lib/config";
+import { getTodayState, isBetHidden } from "@/lib/data";
+import {
+  ARRIVAL_BET_KEY,
+  formatDateLabel,
+  minutesToHHMM,
+  targetName,
+} from "@/lib/config";
 import BetForm from "@/components/BetForm";
 import BetCalendar from "@/components/BetCalendar";
 
 export default async function HomePage() {
   const session = await auth();
   const user = session?.user;
+  if (user && !user.isAdmin && (await isBetHidden(user.id, ARRIVAL_BET_KEY))) {
+    redirect("/");
+  }
   const { date, weekend, suspended, closed, actualMin, actualAbsent, bets, myBet } =
     await getTodayState(user?.id);
 

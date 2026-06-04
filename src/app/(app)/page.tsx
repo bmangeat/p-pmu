@@ -17,7 +17,8 @@ export default async function HubPage() {
   const session = await auth();
   if (!session?.user) redirect("/login");
   const userId = session.user.id;
-  const { arrival, arrivalStatus, openGames, closedGames } = await getHubData(userId);
+  const { arrival, arrivalStatus, arrivalHidden, openGames, closedGames } =
+    await getHubData(userId, session.user.isAdmin);
 
   const badge = ARRIVAL_BADGE[arrivalStatus];
 
@@ -28,32 +29,38 @@ export default async function HubPage() {
         <p className="mt-1 text-zinc-500">Choisis un pari et tente ta chance.</p>
       </section>
 
+      {arrivalHidden && openGames.length === 0 && (
+        <p className="text-zinc-400">Aucun pari en cours pour toi.</p>
+      )}
+
       <div className="grid gap-4 sm:grid-cols-2">
         {/* Carte pari d'arrivée */}
-        <Link
-          href="/arrivee"
-          className="group rounded-2xl border border-amber-100 bg-white p-5 shadow-sm transition hover:border-orange-200 hover:shadow"
-        >
-          <div className="mb-2 flex items-start justify-between gap-2">
-            <span className="text-3xl">🏁</span>
-            <span className={`rounded-full px-2 py-0.5 text-xs font-medium ${badge.cls}`}>
-              {badge.label}
-            </span>
-          </div>
-          <h2 className="font-bold text-zinc-900 group-hover:text-orange-600">
-            Heure d&apos;arrivée
-          </h2>
-          <p className="mt-1 text-sm text-zinc-500">
-            {`À quelle heure arrive ${targetName()} ?`}
-          </p>
-          <p className="mt-3 text-sm font-medium text-zinc-700">
-            {arrivalStatus === "open"
-              ? arrival.myBet
-                ? "✅ Tu as parié aujourd'hui"
-                : "⏳ Tu n'as pas encore parié"
-              : "Reviens plus tard"}
-          </p>
-        </Link>
+        {!arrivalHidden && (
+          <Link
+            href="/arrivee"
+            className="group rounded-2xl border border-amber-100 bg-white p-5 shadow-sm transition hover:border-orange-200 hover:shadow"
+          >
+            <div className="mb-2 flex items-start justify-between gap-2">
+              <span className="text-3xl">🏁</span>
+              <span className={`rounded-full px-2 py-0.5 text-xs font-medium ${badge.cls}`}>
+                {badge.label}
+              </span>
+            </div>
+            <h2 className="font-bold text-zinc-900 group-hover:text-orange-600">
+              Heure d&apos;arrivée
+            </h2>
+            <p className="mt-1 text-sm text-zinc-500">
+              {`À quelle heure arrive ${targetName()} ?`}
+            </p>
+            <p className="mt-3 text-sm font-medium text-zinc-700">
+              {arrivalStatus === "open"
+                ? arrival.myBet
+                  ? "✅ Tu as parié aujourd'hui"
+                  : "⏳ Tu n'as pas encore parié"
+                : "Reviens plus tard"}
+            </p>
+          </Link>
+        )}
 
         {/* Cartes des défis ouverts */}
         {openGames.map((g) => (

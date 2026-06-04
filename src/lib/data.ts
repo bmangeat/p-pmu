@@ -1,5 +1,21 @@
 import { prisma } from "@/lib/prisma";
-import { isWeekend, todayDateString } from "@/lib/config";
+import { ARRIVAL_BET_KEY, isWeekend, pickBetKey, todayDateString } from "@/lib/config";
+
+// Clés de paris masqués à un utilisateur.
+export async function getHiddenBetKeys(userId: string): Promise<Set<string>> {
+  const rows = await prisma.hiddenBet.findMany({
+    where: { userId },
+    select: { betKey: true },
+  });
+  return new Set(rows.map((r) => r.betKey));
+}
+
+export async function isBetHidden(userId: string, betKey: string): Promise<boolean> {
+  const row = await prisma.hiddenBet.findUnique({
+    where: { betKey_userId: { betKey, userId } },
+  });
+  return !!row;
+}
 
 // État du jour courant : le jour, tous les paris, et le pari de l'utilisateur.
 export async function getTodayState(userId?: string) {
@@ -86,7 +102,10 @@ export async function getLeaderboard(): Promise<LeaderboardEntry[]> {
 export type ArrivalStatus = "weekend" | "suspended" | "closed" | "open";
 
 // Données du hub d'accueil : résumé du pari d'arrivée + défis ouverts/terminés.
-export async function getHubData(userId: string) {
+// Les paris masqués à l'utilisateur sont filtrés (sauf pour les admins).
+export async function getHubData(userId: string, isAdmin: boolean) {
+  const hidden = isAdmin ? new Set<string>() : await getHiddenBetKeys(userId);
+
   const arrival = await getTodayState(userId);
   const arrivalStatus: ArrivalStatus = arrival.weekend
     ? "weekend"
@@ -95,27 +114,64 @@ export async function getHubData(userId: string) {
       : arrival.closed
         ? "closed"
         : "open";
+  const arrivalHidden = hidden.has(ARRIVAL_BET_KEY);
 
-  const openGames = await prisma.pickGame.findMany({
-    where: { status: "open" },
-    orderBy: { createdAt: "desc" },
-    include: {
-      _count: { select: { votes: true } },
-      votes: { where: { userId }, select: { candidateId: true } },
-    },
-  });
+  const openGames = (
+    await prisma.pickGame.findMany({
+      where: { status: "open" },
+      orderBy: { createdAt: "desc" },
+      include: {
+        _count: { select: { votes: true } },
+        votes: { where: { userId }, select: { candidateId: true } },
+      },
+    })
+  ).filter((g) => !hidden.has(pickBetKey(g.id)));
 
-  const closedGames = await prisma.pickGame.findMany({
-    where: { status: "closed" },
-    orderBy: { closedAt: "desc" },
-    take: 10,
-    include: {
-      candidates: { select: { id: true, name: true } },
-      _count: { select: { votes: true } },
-    },
-  });
+  const closedGames = (
+    await prisma.pickGame.findMany({
+      where: { status: "closed" },
+      orderBy: { closedAt: "desc" },
+      take: 10,
+      include: {
+        candidates: { select: { id: true, name: true } },
+        _count: { select: { votes: true } },
+      },
+    })
+  ).filter((g) => !hidden.has(pickBetKey(g.id)));
 
-  return { arrival, arrivalStatus, openGames, closedGames };
+  return { arrival, arrivalStatus, arrivalHidden, openGames, closedGames };
+}
+
+// Liste des utilisateurs + matrice de visibilité des paris (pour l'admin).
+export async function getUsersWithVisibility() {
+  const [users, games, hidden] = await Promise.all([
+    prisma.user.findMany({
+      orderBy: { createdAt: "asc" },
+      select: { id: true, name: true, email: true, verified: true, notifyEmail: true },
+    }),
+    prisma.pickGame.findMany({
+      orderBy: { createdAt: "desc" },
+      select: { id: true, title: true, status: true },
+    }),
+    prisma.hiddenBet.findMany({ select: { betKey: true, userId: true } }),
+  ]);
+
+  const hiddenByUser = new Map<string, Set<string>>();
+  for (const h of hidden) {
+    const set = hiddenByUser.get(h.userId) ?? new Set<string>();
+    set.add(h.betKey);
+    hiddenByUser.set(h.userId, set);
+  }
+
+  const bets = [
+    { key: ARRIVAL_BET_KEY, label: "🏁 Heure d'arrivée" },
+    ...games.map((g) => ({
+      key: pickBetKey(g.id),
+      label: `🗳️ ${g.title}${g.status === "closed" ? " (clôturé)" : ""}`,
+    })),
+  ];
+
+  return { users, bets, hiddenByUser };
 }
 
 // Détail d'un défi : candidats, décompte des votes, vote de l'utilisateur, gagnant.

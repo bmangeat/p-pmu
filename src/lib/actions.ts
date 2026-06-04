@@ -11,6 +11,8 @@ import {
   isWeekend,
   targetName,
   SCORE,
+  ARRIVAL_BET_KEY,
+  pickBetKey,
 } from "@/lib/config";
 import { regenerateValidationCode, verifyAndConsume } from "@/lib/validation-code";
 import { sendReminderEmail } from "@/lib/email";
@@ -218,6 +220,11 @@ export async function voteAction(
   if (!game) return { error: "Défi introuvable." };
   if (game.status !== "open") return { error: "Les votes sont clôturés pour ce défi." };
 
+  const hiddenPick = await prisma.hiddenBet.findUnique({
+    where: { betKey_userId: { betKey: pickBetKey(gameId), userId: session.user.id } },
+  });
+  if (hiddenPick) return { error: "Ce défi ne t'est pas accessible." };
+
   const candidate = await prisma.candidate.findFirst({
     where: { id: candidateId, gameId },
   });
@@ -303,9 +310,38 @@ export async function deletePickGameAction(
   const gameId = String(formData.get("gameId") ?? "");
   if (!gameId) return { error: "Défi manquant." };
 
+  await prisma.hiddenBet.deleteMany({ where: { betKey: pickBetKey(gameId) } });
   await prisma.pickGame.delete({ where: { id: gameId } });
   revalidateGames();
   return { ok: true, message: "Défi supprimé." };
+}
+
+// Masquer / afficher un pari pour un utilisateur précis (admin).
+export async function setBetVisibilityAction(
+  _prev: ActionState,
+  formData: FormData,
+): Promise<ActionState> {
+  const session = await auth();
+  if (!session?.user?.isAdmin) return { error: "Action réservée aux administrateurs." };
+
+  const betKey = String(formData.get("betKey") ?? "");
+  const userId = String(formData.get("userId") ?? "");
+  if (!betKey || !userId) return { error: "Paramètres manquants." };
+  const hide = String(formData.get("hide") ?? "") === "1";
+
+  if (hide) {
+    await prisma.hiddenBet.upsert({
+      where: { betKey_userId: { betKey, userId } },
+      update: {},
+      create: { betKey, userId },
+    });
+  } else {
+    await prisma.hiddenBet.deleteMany({ where: { betKey, userId } });
+  }
+
+  revalidatePath("/admin/utilisateurs");
+  revalidatePath("/");
+  return { ok: true, message: hide ? "Pari masqué." : "Pari affiché." };
 }
 
 // Envoyer un email de test (admin) à sa propre adresse, pour vérifier la config Brevo.
@@ -366,6 +402,11 @@ export async function placeBetAction(
       return { error: "Heure invalide. Utilise le format HH:mm." };
     }
   }
+
+  const hiddenArrival = await prisma.hiddenBet.findUnique({
+    where: { betKey_userId: { betKey: ARRIVAL_BET_KEY, userId: session.user.id } },
+  });
+  if (hiddenArrival) return { error: "Ce pari ne t'est pas accessible." };
 
   const date = todayDateString();
   if (isWeekend(date)) return { error: "Pas de pari le week-end. 🛌" };

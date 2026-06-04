@@ -83,6 +83,14 @@ export function formatDateLabel(dateStr: string): string {
   }).format(d);
 }
 
+// ----- Clés de paris (pour la visibilité par utilisateur) -----
+
+export const ARRIVAL_BET_KEY = "arrival";
+
+export function pickBetKey(gameId: string): string {
+  return `pick:${gameId}`;
+}
+
 // ----- Admin -----
 
 export function adminEmails(): string[] {

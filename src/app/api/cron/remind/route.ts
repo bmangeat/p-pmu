@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { isWeekend, targetName, todayDateString } from "@/lib/config";
+import { ARRIVAL_BET_KEY, isWeekend, targetName, todayDateString } from "@/lib/config";
 import { sendReminderEmail } from "@/lib/email";
 
 export const dynamic = "force-dynamic";
@@ -29,7 +29,17 @@ export async function GET(req: Request) {
     where: { notifyEmail: true, email: { not: null } },
     select: { id: true, name: true, email: true },
   });
-  const toNotify = users.filter((u) => !alreadyBet.has(u.id));
+
+  // Exclure les utilisateurs à qui le pari d'arrivée est masqué.
+  const hiddenRows = await prisma.hiddenBet.findMany({
+    where: { betKey: ARRIVAL_BET_KEY },
+    select: { userId: true },
+  });
+  const hiddenUserIds = new Set(hiddenRows.map((h) => h.userId));
+
+  const toNotify = users.filter(
+    (u) => !alreadyBet.has(u.id) && !hiddenUserIds.has(u.id),
+  );
 
   const target = targetName();
   let sent = 0;

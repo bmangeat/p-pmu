@@ -1,7 +1,8 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { auth } from "@/auth";
-import { getPickGame } from "@/lib/data";
+import { getPickGame, isBetHidden } from "@/lib/data";
+import { pickBetKey } from "@/lib/config";
 import VoteForm from "@/components/VoteForm";
 
 export const dynamic = "force-dynamic";
@@ -14,6 +15,9 @@ export default async function DefiPage({
   const { id } = await params;
   const session = await auth();
   if (!session?.user) redirect("/login");
+  if (!session.user.isAdmin && (await isBetHidden(session.user.id, pickBetKey(id)))) {
+    redirect("/");
+  }
   const data = await getPickGame(id, session.user.id);
 
   if (!data) {

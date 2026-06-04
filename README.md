@@ -15,6 +15,10 @@ P-PMU héberge plusieurs paris :
 L'**accueil (`/`)** est un **hub** qui liste tous les paris en cours. Le **classement** (`/classement`)
 cumule les points de tous les paris (arrivée + défis). Gestion des défis : `/admin/defis`.
 
+**Visibilité par utilisateur** : sur `/admin/utilisateurs`, l'admin voit tous les comptes et peut
+**masquer un pari à un utilisateur précis** (l'arrivée ou un défi). Un pari masqué disparaît de son hub,
+son accès direct est bloqué (redirection), et il n'est plus relancé par email. Les admins voient tout.
+
 ## Stack
 
 - **Next.js 16** (App Router, server-side) + **TypeScript** + **Tailwind CSS v4**
