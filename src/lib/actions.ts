@@ -16,6 +16,7 @@ import {
 } from "@/lib/config";
 import { regenerateValidationCode, verifyAndConsume } from "@/lib/validation-code";
 import { sendReminderEmail } from "@/lib/email";
+import { sendPush } from "@/lib/push";
 
 export type ActionState = { ok?: boolean; error?: string; message?: string };
 
@@ -359,6 +360,68 @@ export async function setBetVisibilityAction(
   revalidatePath("/admin/utilisateurs");
   revalidatePath("/");
   return { ok: true, message: hide ? "Pari masqué." : "Pari affiché." };
+}
+
+// ---- Notifications push ----
+
+type PushSubInput = {
+  endpoint: string;
+  keys?: { p256dh?: string; auth?: string };
+};
+
+// Enregistrer l'abonnement push du navigateur courant pour l'utilisateur.
+export async function subscribePushAction(
+  sub: PushSubInput,
+): Promise<ActionState> {
+  const session = await auth();
+  if (!session?.user?.id) return { error: "Tu dois être connecté." };
+
+  const endpoint = sub?.endpoint;
+  const p256dh = sub?.keys?.p256dh;
+  const auth_ = sub?.keys?.auth;
+  if (!endpoint || !p256dh || !auth_) return { error: "Abonnement invalide." };
+
+  await prisma.pushSubscription.upsert({
+    where: { endpoint },
+    update: { userId: session.user.id, p256dh, auth: auth_ },
+    create: { userId: session.user.id, endpoint, p256dh, auth: auth_ },
+  });
+  return { ok: true, message: "Notifications activées." };
+}
+
+// Supprimer un abonnement push (désactivation).
+export async function unsubscribePushAction(endpoint: string): Promise<ActionState> {
+  const session = await auth();
+  if (!session?.user?.id) return { error: "Tu dois être connecté." };
+  if (endpoint) {
+    await prisma.pushSubscription.deleteMany({
+      where: { endpoint, userId: session.user.id },
+    });
+  }
+  return { ok: true, message: "Notifications désactivées." };
+}
+
+// Envoyer une notification de test à ses propres appareils.
+export async function sendTestPushAction(): Promise<ActionState> {
+  const session = await auth();
+  if (!session?.user?.id) return { error: "Tu dois être connecté." };
+
+  const subs = await prisma.pushSubscription.findMany({
+    where: { userId: session.user.id },
+  });
+  if (subs.length === 0) return { error: "Active d'abord les notifications." };
+
+  let sent = 0;
+  for (const s of subs) {
+    const r = await sendPush(
+      { endpoint: s.endpoint, p256dh: s.p256dh, auth: s.auth },
+      { title: "P-PMU 🎲", body: "Notification de test — tout fonctionne !", url: "/" },
+    );
+    if (r.ok) sent++;
+    if (r.gone) await prisma.pushSubscription.delete({ where: { id: s.id } });
+    if (r.skipped) return { error: "Push non configuré côté serveur (clés VAPID)." };
+  }
+  return { ok: true, message: `Notification de test envoyée (${sent}).` };
 }
 
 // Envoyer un email de test (admin) à sa propre adresse, pour vérifier la config Brevo.

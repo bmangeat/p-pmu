@@ -109,7 +109,28 @@ sont **validés d'office** (voir ci-dessous).
   L'admin peut aussi le **régénérer** manuellement depuis `/admin`.
 - Une fois validé, l'utilisateur n'a plus jamais à le ressaisir (champ `User.verified`).
 
-## Rappels par email (Brevo + Vercel Cron)
+## PWA & notifications push (Web Push + Vercel Cron)
+
+P-PMU est une **PWA installable** (manifest + service worker + icônes). Les rappels se font par
+**notification push** (gratuit, via VAPID/Web Push — pas de service payant).
+
+- Chaque utilisateur active les notifications depuis `/profil` (bouton + bouton « notif de test »).
+- Le **cron Vercel** (`30 7 * * 1-5`, ~9h30) appelle `/api/cron/remind` qui envoie un **push** aux
+  abonnés actifs n'ayant pas encore parié (pari d'arrivée ouvert, non masqué).
+- Abonnements stockés en base (`PushSubscription`). Les abonnements expirés sont nettoyés automatiquement.
+
+**Mise en place :**
+1. Génère une paire de clés : `npx web-push generate-vapid-keys --json`.
+2. Sur Vercel, ajoute : `VAPID_PUBLIC_KEY`, `VAPID_PRIVATE_KEY`, `VAPID_SUBJECT` (`mailto:ton@email`),
+   et `NEXT_PUBLIC_VAPID_PUBLIC_KEY` (= la clé publique).
+3. Redéploie. Active les notifs sur `/profil` et teste avec « notif de test ».
+
+> 📱 **iOS** : les notifications push ne fonctionnent que si la PWA est **installée** sur l'écran
+> d'accueil (Safari → Partager → « Sur l'écran d'accueil »), iOS ≥ 16.4. Android/Chrome/desktop : direct.
+
+> ℹ️ Le code email (Brevo) est conservé mais n'est plus utilisé pour les rappels (push à la place).
+
+## (Historique) Rappels par email (Brevo + Vercel Cron)
 
 - Chaque utilisateur peut activer les **rappels par email** depuis `/profil` (désactivé par défaut).
 - Tous les jours ouvrés à ~9h30, un **cron Vercel** appelle `/api/cron/remind` qui envoie un
