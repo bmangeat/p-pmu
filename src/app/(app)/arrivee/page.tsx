@@ -91,17 +91,22 @@ export default async function HomePage() {
           <p className="text-zinc-600">
             Les paris sont clôturés pour aujourd&apos;hui. Rendez-vous demain matin ! ☕
           </p>
+        ) : myBet ? (
+          <div className="space-y-1">
+            <p className="text-sm text-zinc-500">
+              Ton pari est enregistré et définitif :
+            </p>
+            <p className="text-2xl font-extrabold text-orange-600">
+              {predictionLabel(myBet)}
+            </p>
+          </div>
         ) : (
           <div className="space-y-3">
             <p className="text-sm text-zinc-500">
-              {myBet
-                ? `Ton pari actuel : ${predictionLabel(myBet)}. Tu peux le modifier tant que les paris sont ouverts.`
-                : "Tu n'as pas encore parié aujourd'hui."}
+              Tu n&apos;as pas encore parié aujourd&apos;hui. Attention, ton pari sera
+              définitif. 🔒
             </p>
-            <BetForm
-              defaultTime={minutesToHHMM(myBet?.predictedMin ?? 9 * 60)}
-              defaultMode={myBet?.predictedAbsent ? "absent" : "time"}
-            />
+            <BetForm defaultTime={minutesToHHMM(9 * 60)} />
           </div>
         )}
       </section>

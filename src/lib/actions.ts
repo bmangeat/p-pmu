@@ -507,10 +507,15 @@ export async function placeBetAction(
   if (day.suspended) return { error: "Les paris sont suspendus pour ce jour." };
   if (day.closed) return { error: "Les paris sont clôturés pour aujourd'hui." };
 
-  await prisma.bet.upsert({
+  // Le pari est définitif : on refuse toute modification une fois soumis.
+  const existing = await prisma.bet.findUnique({
     where: { userId_dayId: { userId: session.user.id, dayId: day.id } },
-    update: { predictedMin, predictedAbsent: mode === "absent" },
-    create: {
+    select: { id: true },
+  });
+  if (existing) return { error: "Ton pari est définitif, tu ne peux plus le modifier." };
+
+  await prisma.bet.create({
+    data: {
       userId: session.user.id,
       dayId: day.id,
       predictedMin,
