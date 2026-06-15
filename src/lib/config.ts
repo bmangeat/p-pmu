@@ -20,6 +20,10 @@ export const SCORE = {
   PICK_CORRECT: 100, // vote correct sur un défi "liste de personnes"
 };
 
+// Heure d'arrivée maximale autorisée pour un pari (minutes depuis minuit).
+// Au-delà de 10:00, on considère que ce n'est plus un retard plausible.
+export const ARRIVAL_MAX_MIN = 10 * 60; // 10:00
+
 export type BetInput = { predictedMin: number | null; predictedAbsent: boolean };
 export type Outcome = { actualMin: number | null; actualAbsent: boolean };
 

@@ -7,11 +7,13 @@ import { prisma } from "@/lib/prisma";
 import {
   scoreBet,
   hhmmToMinutes,
+  minutesToHHMM,
   todayDateString,
   isWeekend,
   targetName,
   SCORE,
   ARRIVAL_BET_KEY,
+  ARRIVAL_MAX_MIN,
   pickBetKey,
 } from "@/lib/config";
 import { regenerateValidationCode, verifyAndConsume } from "@/lib/validation-code";
@@ -480,6 +482,11 @@ export async function placeBetAction(
     predictedMin = hhmmToMinutes(String(formData.get("time") ?? ""));
     if (predictedMin === null) {
       return { error: "Heure invalide. Utilise le format HH:mm." };
+    }
+    if (predictedMin > ARRIVAL_MAX_MIN) {
+      return {
+        error: `L'heure d'arrivée ne peut pas dépasser ${minutesToHHMM(ARRIVAL_MAX_MIN)}.`,
+      };
     }
   }
 
