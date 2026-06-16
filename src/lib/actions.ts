@@ -10,13 +10,13 @@ import {
   minutesToHHMM,
   todayDateString,
   isWeekend,
-  isPastBetDeadline,
-  BET_DEADLINE_MIN,
+  nowMinutesInOffice,
   targetName,
   SCORE,
   ARRIVAL_BET_KEY,
   pickBetKey,
 } from "@/lib/config";
+import { getBetDeadlineMin, setBetDeadlineMin } from "@/lib/settings";
 import { regenerateValidationCode, verifyAndConsume } from "@/lib/validation-code";
 import { sendReminderEmail } from "@/lib/email";
 import { sendPush } from "@/lib/push";
@@ -493,9 +493,10 @@ export async function placeBetAction(
 
   const date = todayDateString();
   if (isWeekend(date)) return { error: "Pas de pari le week-end. 🛌" };
-  if (isPastBetDeadline()) {
+  const deadlineMin = await getBetDeadlineMin();
+  if (nowMinutesInOffice() >= deadlineMin) {
     return {
-      error: `Trop tard ! Les paris ferment à ${minutesToHHMM(BET_DEADLINE_MIN)}. 🔒`,
+      error: `Trop tard ! Les paris ferment à ${minutesToHHMM(deadlineMin)}. 🔒`,
     };
   }
 
@@ -529,6 +530,25 @@ export async function placeBetAction(
     ok: true,
     message: mode === "absent" ? "Pari « absent » enregistré !" : "Pari enregistré !",
   };
+}
+
+// Définir l'heure limite des paris (admin).
+export async function setBetDeadlineAction(
+  _prev: ActionState,
+  formData: FormData,
+): Promise<ActionState> {
+  const session = await auth();
+  if (!session?.user?.isAdmin) return { error: "Action réservée aux administrateurs." };
+
+  const min = hhmmToMinutes(String(formData.get("time") ?? ""));
+  if (min === null) return { error: "Heure invalide. Utilise le format HH:mm." };
+
+  await setBetDeadlineMin(min);
+
+  revalidatePath("/");
+  revalidatePath("/arrivee");
+  revalidatePath("/admin");
+  return { ok: true, message: `Heure limite des paris fixée à ${minutesToHHMM(min)}.` };
 }
 
 // Saisir le résultat (admin) : présent à une heure, ou absent. Calcule les scores.

@@ -7,10 +7,11 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
-// Réglages applicatifs (ligne unique "singleton") : code de validation courant.
+// Réglages applicatifs (ligne unique "singleton") : code de validation, heure limite des paris.
 model AppSetting {
   id             String   @id @default("singleton")
   validationCode String
+  betDeadlineMin Int      @default(600) // heure limite des paris, minutes depuis minuit (10:00)
   updatedAt      DateTime @updatedAt
 }
 

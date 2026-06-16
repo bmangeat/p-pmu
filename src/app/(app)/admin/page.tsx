@@ -4,6 +4,7 @@ import { prisma } from "@/lib/prisma";
 import {
   regenerateCodeAction,
   reopenDayAction,
+  setBetDeadlineAction,
   toggleSuspendDayAction,
 } from "@/lib/actions";
 import {
@@ -13,6 +14,7 @@ import {
   todayDateString,
 } from "@/lib/config";
 import { getValidationCode } from "@/lib/validation-code";
+import { getBetDeadlineMin } from "@/lib/settings";
 import AdminForm from "@/components/AdminForm";
 
 export default async function AdminPage() {
@@ -33,6 +35,7 @@ export default async function AdminPage() {
 
   const today = todayDateString();
   const validationCode = await getValidationCode();
+  const deadlineMin = await getBetDeadlineMin();
   const days = await prisma.arrivalDay.findMany({
     orderBy: { date: "desc" },
     take: 14,
@@ -51,6 +54,10 @@ export default async function AdminPage() {
   async function regenerate() {
     "use server";
     await regenerateCodeAction({}, new FormData());
+  }
+  async function setDeadline(formData: FormData) {
+    "use server";
+    await setBetDeadlineAction({}, formData);
   }
 
   return (
@@ -104,6 +111,29 @@ export default async function AdminPage() {
             todayDay?.actualMin != null ? minutesToHHMM(todayDay.actualMin) : "09:00"
           }
         />
+      </section>
+
+      <section className="rounded-2xl border border-amber-100 bg-white p-5 shadow-sm">
+        <h2 className="mb-1 text-lg font-bold text-zinc-900">Heure limite des paris</h2>
+        <p className="mb-3 text-sm text-zinc-500">
+          Au-delà de cette heure, plus personne ne peut parier (anti-triche). Actuellement{" "}
+          <span className="font-semibold text-zinc-700">{minutesToHHMM(deadlineMin)}</span>.
+        </p>
+        <form action={setDeadline} className="flex flex-wrap items-end gap-3">
+          <label className="flex flex-col gap-1 text-sm font-medium text-zinc-600">
+            Nouvelle heure limite
+            <input
+              type="time"
+              name="time"
+              defaultValue={minutesToHHMM(deadlineMin)}
+              required
+              className="rounded-xl border border-zinc-200 bg-white px-3 py-2 text-lg text-zinc-900 focus:border-orange-400 focus:outline-none focus:ring-2 focus:ring-orange-200"
+            />
+          </label>
+          <button className="rounded-full bg-orange-500 px-5 py-2.5 font-semibold text-white shadow-sm shadow-orange-500/20 hover:bg-orange-400">
+            Enregistrer
+          </button>
+        </form>
       </section>
 
       <section className="rounded-2xl border border-amber-100 bg-white p-5 shadow-sm">

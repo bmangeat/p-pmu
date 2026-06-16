@@ -1,11 +1,6 @@
 import { prisma } from "@/lib/prisma";
-import {
-  ARRIVAL_BET_KEY,
-  isPastBetDeadline,
-  isWeekend,
-  pickBetKey,
-  todayDateString,
-} from "@/lib/config";
+import { ARRIVAL_BET_KEY, isWeekend, pickBetKey, todayDateString } from "@/lib/config";
+import { isPastBetDeadlineNow } from "@/lib/settings";
 
 // Clés de paris masqués à un utilisateur.
 export async function getHiddenBetKeys(userId: string): Promise<Set<string>> {
@@ -119,7 +114,7 @@ export async function getHubData(userId: string, isAdmin: boolean) {
       ? "suspended"
       : arrival.closed
         ? "closed"
-        : isPastBetDeadline()
+        : (await isPastBetDeadlineNow())
           ? "deadline"
           : "open";
   const arrivalHidden = hidden.has(ARRIVAL_BET_KEY);

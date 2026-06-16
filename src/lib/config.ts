@@ -20,10 +20,10 @@ export const SCORE = {
   PICK_CORRECT: 100, // vote correct sur un défi "liste de personnes"
 };
 
-// Heure limite pour PLACER un pari (minutes depuis minuit, fuseau du bureau).
-// Passé 10:00, les paris du jour sont fermés (anti-triche : on ne peut plus parier
-// une fois la personne potentiellement arrivée). L'heure *pariée*, elle, est libre.
-export const BET_DEADLINE_MIN = 10 * 60; // 10:00
+// Heure limite par défaut pour PLACER un pari (minutes depuis minuit, fuseau du bureau).
+// Réglable par l'admin (stockée en base). Passé cette heure, les paris du jour sont
+// fermés (anti-triche). L'heure *pariée*, elle, reste libre.
+export const DEFAULT_BET_DEADLINE_MIN = 10 * 60; // 10:00
 
 export type BetInput = { predictedMin: number | null; predictedAbsent: boolean };
 export type Outcome = { actualMin: number | null; actualAbsent: boolean };
@@ -89,11 +89,6 @@ export function nowMinutesInOffice(date = new Date()): number {
   const h = Number(parts.find((p) => p.type === "hour")?.value ?? "0");
   const m = Number(parts.find((p) => p.type === "minute")?.value ?? "0");
   return h * 60 + m;
-}
-
-// Vrai si l'heure limite de pari (10:00) est dépassée pour aujourd'hui.
-export function isPastBetDeadline(date = new Date()): boolean {
-  return nowMinutesInOffice(date) >= BET_DEADLINE_MIN;
 }
 
 // Affichage lisible d'une date "YYYY-MM-DD" (ex: "mar. 3 juin").

@@ -4,12 +4,12 @@ import { auth } from "@/auth";
 import { getTodayState, isBetHidden } from "@/lib/data";
 import {
   ARRIVAL_BET_KEY,
-  BET_DEADLINE_MIN,
   formatDateLabel,
-  isPastBetDeadline,
   minutesToHHMM,
+  nowMinutesInOffice,
   targetName,
 } from "@/lib/config";
+import { getBetDeadlineMin } from "@/lib/settings";
 import BetForm from "@/components/BetForm";
 import BetCalendar from "@/components/BetCalendar";
 
@@ -22,8 +22,9 @@ export default async function HomePage() {
   const { date, weekend, suspended, closed, actualMin, actualAbsent, bets, myBet } =
     await getTodayState(user?.id);
 
-  const deadline = minutesToHHMM(BET_DEADLINE_MIN);
-  const deadlinePassed = isPastBetDeadline();
+  const deadlineMin = await getBetDeadlineMin();
+  const deadline = minutesToHHMM(deadlineMin);
+  const deadlinePassed = nowMinutesInOffice() >= deadlineMin;
 
   const ranked = closed
     ? [...bets].sort((a, b) => (b.points ?? 0) - (a.points ?? 0))
