@@ -2,7 +2,6 @@
 
 import { useActionState, useState } from "react";
 import { placeBetAction, type ActionState } from "@/lib/actions";
-import { ARRIVAL_MAX_MIN, minutesToHHMM } from "@/lib/config";
 
 export default function BetForm({
   defaultTime,
@@ -48,12 +47,8 @@ export default function BetForm({
               type="time"
               name="time"
               defaultValue={defaultTime}
-              max={minutesToHHMM(ARRIVAL_MAX_MIN)}
               className="rounded-xl border border-zinc-200 bg-white px-3 py-2 text-lg text-zinc-900 focus:border-orange-400 focus:outline-none focus:ring-2 focus:ring-orange-200"
             />
-            <span className="text-xs font-normal text-zinc-400">
-              Au plus tard {minutesToHHMM(ARRIVAL_MAX_MIN)}
-            </span>
           </label>
         ) : (
           <p className="text-sm text-zinc-500">

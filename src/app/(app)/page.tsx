@@ -9,6 +9,7 @@ export const dynamic = "force-dynamic";
 const ARRIVAL_BADGE: Record<ArrivalStatus, { label: string; cls: string }> = {
   open: { label: "Paris ouverts", cls: "bg-emerald-100 text-emerald-700" },
   closed: { label: "Clôturé", cls: "bg-rose-100 text-rose-600" },
+  deadline: { label: "Paris fermés", cls: "bg-rose-100 text-rose-600" },
   suspended: { label: "Suspendu", cls: "bg-zinc-200 text-zinc-600" },
   weekend: { label: "Week-end", cls: "bg-rose-100 text-rose-500" },
 };
@@ -53,11 +54,13 @@ export default async function HubPage() {
               {`À quelle heure arrive ${targetName()} ?`}
             </p>
             <p className="mt-3 text-sm font-medium text-zinc-700">
-              {arrivalStatus === "open"
-                ? arrival.myBet
-                  ? "✅ Tu as parié aujourd'hui"
-                  : "⏳ Tu n'as pas encore parié"
-                : "Reviens plus tard"}
+              {arrival.myBet
+                ? "✅ Tu as parié aujourd'hui"
+                : arrivalStatus === "open"
+                  ? "⏳ Tu n'as pas encore parié"
+                  : arrivalStatus === "deadline"
+                    ? "🔒 Trop tard, c'est fermé"
+                    : "Reviens plus tard"}
             </p>
           </Link>
         )}

@@ -10,10 +10,11 @@ import {
   minutesToHHMM,
   todayDateString,
   isWeekend,
+  isPastBetDeadline,
+  BET_DEADLINE_MIN,
   targetName,
   SCORE,
   ARRIVAL_BET_KEY,
-  ARRIVAL_MAX_MIN,
   pickBetKey,
 } from "@/lib/config";
 import { regenerateValidationCode, verifyAndConsume } from "@/lib/validation-code";
@@ -483,11 +484,6 @@ export async function placeBetAction(
     if (predictedMin === null) {
       return { error: "Heure invalide. Utilise le format HH:mm." };
     }
-    if (predictedMin > ARRIVAL_MAX_MIN) {
-      return {
-        error: `L'heure d'arrivée ne peut pas dépasser ${minutesToHHMM(ARRIVAL_MAX_MIN)}.`,
-      };
-    }
   }
 
   const hiddenArrival = await prisma.hiddenBet.findUnique({
@@ -497,6 +493,11 @@ export async function placeBetAction(
 
   const date = todayDateString();
   if (isWeekend(date)) return { error: "Pas de pari le week-end. 🛌" };
+  if (isPastBetDeadline()) {
+    return {
+      error: `Trop tard ! Les paris ferment à ${minutesToHHMM(BET_DEADLINE_MIN)}. 🔒`,
+    };
+  }
 
   const day = await prisma.arrivalDay.upsert({
     where: { date },

@@ -1,5 +1,11 @@
 import { prisma } from "@/lib/prisma";
-import { ARRIVAL_BET_KEY, isWeekend, pickBetKey, todayDateString } from "@/lib/config";
+import {
+  ARRIVAL_BET_KEY,
+  isPastBetDeadline,
+  isWeekend,
+  pickBetKey,
+  todayDateString,
+} from "@/lib/config";
 
 // Clés de paris masqués à un utilisateur.
 export async function getHiddenBetKeys(userId: string): Promise<Set<string>> {
@@ -99,7 +105,7 @@ export async function getLeaderboard(): Promise<LeaderboardEntry[]> {
     .sort((a, b) => b.totalPoints - a.totalPoints);
 }
 
-export type ArrivalStatus = "weekend" | "suspended" | "closed" | "open";
+export type ArrivalStatus = "weekend" | "suspended" | "closed" | "deadline" | "open";
 
 // Données du hub d'accueil : résumé du pari d'arrivée + défis ouverts/terminés.
 // Les paris masqués à l'utilisateur sont filtrés (sauf pour les admins).
@@ -113,7 +119,9 @@ export async function getHubData(userId: string, isAdmin: boolean) {
       ? "suspended"
       : arrival.closed
         ? "closed"
-        : "open";
+        : isPastBetDeadline()
+          ? "deadline"
+          : "open";
   const arrivalHidden = hidden.has(ARRIVAL_BET_KEY);
 
   const openGames = (

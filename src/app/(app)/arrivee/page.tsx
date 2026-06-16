@@ -4,7 +4,9 @@ import { auth } from "@/auth";
 import { getTodayState, isBetHidden } from "@/lib/data";
 import {
   ARRIVAL_BET_KEY,
+  BET_DEADLINE_MIN,
   formatDateLabel,
+  isPastBetDeadline,
   minutesToHHMM,
   targetName,
 } from "@/lib/config";
@@ -19,6 +21,9 @@ export default async function HomePage() {
   }
   const { date, weekend, suspended, closed, actualMin, actualAbsent, bets, myBet } =
     await getTodayState(user?.id);
+
+  const deadline = minutesToHHMM(BET_DEADLINE_MIN);
+  const deadlinePassed = isPastBetDeadline();
 
   const ranked = closed
     ? [...bets].sort((a, b) => (b.points ?? 0) - (a.points ?? 0))
@@ -41,8 +46,10 @@ export default async function HomePage() {
             <span className="font-medium text-zinc-500">jour suspendu</span>
           ) : closed ? (
             <span className="font-medium text-rose-500">paris clôturés</span>
+          ) : deadlinePassed ? (
+            <span className="font-medium text-rose-500">{`paris fermés (après ${deadline})`}</span>
           ) : (
-            <span className="font-medium text-emerald-600">paris ouverts</span>
+            <span className="font-medium text-emerald-600">{`paris ouverts jusqu'à ${deadline}`}</span>
           )}
         </p>
       </section>
@@ -100,11 +107,14 @@ export default async function HomePage() {
               {predictionLabel(myBet)}
             </p>
           </div>
+        ) : deadlinePassed ? (
+          <p className="text-zinc-600">
+            {`Trop tard ! Les paris ferment à ${deadline}. Reviens demain matin avant ${deadline}. ⏰`}
+          </p>
         ) : (
           <div className="space-y-3">
             <p className="text-sm text-zinc-500">
-              Tu n&apos;as pas encore parié aujourd&apos;hui. Attention, ton pari sera
-              définitif. 🔒
+              {`Tu n'as pas encore parié aujourd'hui. À placer avant ${deadline}, et c'est définitif. 🔒`}
             </p>
             <BetForm defaultTime={minutesToHHMM(9 * 60)} />
           </div>

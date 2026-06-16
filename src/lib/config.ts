@@ -20,9 +20,10 @@ export const SCORE = {
   PICK_CORRECT: 100, // vote correct sur un défi "liste de personnes"
 };
 
-// Heure d'arrivée maximale autorisée pour un pari (minutes depuis minuit).
-// Au-delà de 10:00, on considère que ce n'est plus un retard plausible.
-export const ARRIVAL_MAX_MIN = 10 * 60; // 10:00
+// Heure limite pour PLACER un pari (minutes depuis minuit, fuseau du bureau).
+// Passé 10:00, les paris du jour sont fermés (anti-triche : on ne peut plus parier
+// une fois la personne potentiellement arrivée). L'heure *pariée*, elle, est libre.
+export const BET_DEADLINE_MIN = 10 * 60; // 10:00
 
 export type BetInput = { predictedMin: number | null; predictedAbsent: boolean };
 export type Outcome = { actualMin: number | null; actualAbsent: boolean };
@@ -75,6 +76,24 @@ export function isWeekend(dateStr: string): boolean {
   const [y, m, d] = dateStr.split("-").map(Number);
   const dow = new Date(Date.UTC(y, m - 1, d)).getUTCDay(); // 0 = dimanche, 6 = samedi
   return dow === 0 || dow === 6;
+}
+
+// Heure courante en minutes depuis minuit, dans le fuseau du bureau.
+export function nowMinutesInOffice(date = new Date()): number {
+  const parts = new Intl.DateTimeFormat("en-GB", {
+    timeZone: OFFICE_TZ,
+    hour: "2-digit",
+    minute: "2-digit",
+    hourCycle: "h23",
+  }).formatToParts(date);
+  const h = Number(parts.find((p) => p.type === "hour")?.value ?? "0");
+  const m = Number(parts.find((p) => p.type === "minute")?.value ?? "0");
+  return h * 60 + m;
+}
+
+// Vrai si l'heure limite de pari (10:00) est dépassée pour aujourd'hui.
+export function isPastBetDeadline(date = new Date()): boolean {
+  return nowMinutesInOffice(date) >= BET_DEADLINE_MIN;
 }
 
 // Affichage lisible d'une date "YYYY-MM-DD" (ex: "mar. 3 juin").
