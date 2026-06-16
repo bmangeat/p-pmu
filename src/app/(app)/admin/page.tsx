@@ -16,6 +16,7 @@ import {
 import { getValidationCode } from "@/lib/validation-code";
 import { getBetDeadlineMin } from "@/lib/settings";
 import AdminForm from "@/components/AdminForm";
+import RemindButton from "@/components/RemindButton";
 
 export default async function AdminPage() {
   const session = await auth();
@@ -134,6 +135,15 @@ export default async function AdminPage() {
             Enregistrer
           </button>
         </form>
+      </section>
+
+      <section className="rounded-2xl border border-amber-100 bg-white p-5 shadow-sm">
+        <h2 className="mb-1 text-lg font-bold text-zinc-900">Rappel aux participants</h2>
+        <p className="mb-3 text-sm text-zinc-500">
+          Envoie une notification push à tous les participants qui n&apos;ont pas encore
+          parié sur l&apos;heure d&apos;arrivée aujourd&apos;hui (paris ouverts uniquement).
+        </p>
+        <RemindButton />
       </section>
 
       <section className="rounded-2xl border border-amber-100 bg-white p-5 shadow-sm">

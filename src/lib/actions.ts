@@ -551,6 +551,77 @@ export async function setBetDeadlineAction(
   return { ok: true, message: `Heure limite des paris fixée à ${minutesToHHMM(min)}.` };
 }
 
+// Relancer par notification push les participants n'ayant pas encore parié aujourd'hui (admin).
+export async function remindArrivalBettorsAction(
+  _prev: ActionState,
+  _formData: FormData,
+): Promise<ActionState> {
+  const session = await auth();
+  if (!session?.user?.isAdmin) return { error: "Action réservée aux administrateurs." };
+
+  const date = todayDateString();
+  if (isWeekend(date)) return { error: "Pas de pari le week-end. 🛌" };
+
+  const day = await prisma.arrivalDay.findUnique({
+    where: { date },
+    include: { bets: { select: { userId: true } } },
+  });
+  if (day?.suspended) return { error: "Jour suspendu : aucun rappel à envoyer." };
+  if (day?.closed) return { error: "Les paris sont déjà clôturés." };
+
+  const deadlineMin = await getBetDeadlineMin();
+  if (nowMinutesInOffice() >= deadlineMin) {
+    return { error: `Trop tard : les paris sont fermés (${minutesToHHMM(deadlineMin)}).` };
+  }
+
+  const alreadyBet = new Set((day?.bets ?? []).map((b) => b.userId));
+
+  const hiddenRows = await prisma.hiddenBet.findMany({
+    where: { betKey: ARRIVAL_BET_KEY },
+    select: { userId: true },
+  });
+  const hiddenUserIds = new Set(hiddenRows.map((h) => h.userId));
+
+  const subs = await prisma.pushSubscription.findMany({
+    include: { user: { select: { id: true, active: true } } },
+  });
+
+  const target = targetName();
+  const payload = {
+    title: "⏰ P-PMU",
+    body: `N'oublie pas de parier sur l'heure d'arrivée de ${target} ! ⏱️`,
+    url: "/arrivee",
+  };
+
+  let sent = 0;
+  const notifiedUsers = new Set<string>();
+  for (const s of subs) {
+    const uid = s.user.id;
+    if (!s.user.active || alreadyBet.has(uid) || hiddenUserIds.has(uid)) continue;
+    const r = await sendPush(
+      { endpoint: s.endpoint, p256dh: s.p256dh, auth: s.auth },
+      payload,
+    );
+    if (r.ok) {
+      sent++;
+      notifiedUsers.add(uid);
+    }
+    if (r.gone) await prisma.pushSubscription.delete({ where: { id: s.id } });
+  }
+
+  if (notifiedUsers.size === 0) {
+    return {
+      ok: true,
+      message:
+        "Personne à relancer : tout le monde a parié, ou aucun retardataire n'est abonné aux notifications.",
+    };
+  }
+  return {
+    ok: true,
+    message: `${notifiedUsers.size} participant(s) relancé(s) par notification (${sent} appareil(s)).`,
+  };
+}
+
 // Saisir le résultat (admin) : présent à une heure, ou absent. Calcule les scores.
 export async function setActualArrivalAction(
   _prev: ActionState,
